@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name           Makerworld Enhancements
 // @description    Enhancements for Makerworld website
-// @version        1.0.3
-// @icon           https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/icon.png
+// @version        1.0.4
+// @icon           https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/icon.png?raw=true
 //
 // @author         Cufiy (aka JMcrafter26) <https://cufiy.net>
 // @namespace      https://github.com/JMcrafter26

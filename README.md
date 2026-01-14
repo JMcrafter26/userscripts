@@ -43,11 +43,12 @@ This repository contains my collection of userscripts that enhance the functiona
 https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
 ```
 
-- **Description**: Blocks anti-debugging scripts on websites to allow easier debugging. Based on the concept from [LemmeDebug](http://github.com/deeeeone/userscripts).
+- Description: Blocks anti-debugging scripts on websites to allow easier debugging. Based on the concept from [LemmeDebug](http://github.com/deeeeone/userscripts).
+
 - Features:
   - Blocks common anti-debugging techniques.
   - Allows developers to inspect and debug web pages without interference.
-- **Author**: Cufiy <https://cufiy.net> + deeeeone
+- **Author**: Cufiy + deeeeone
 - **License**: AGPL-3.0
 
 ## Makerworld Enhancements
@@ -59,11 +60,12 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/ju
 https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/makerworld-enhancements.user.js
 ```
 
-- **Description**: This userscript provides various enhancements for the MakerWorld website, including quick search functionality and many more to come.
+This userscript provides various enhancements for the MakerWorld website, including quick search functionality and many more to come.
+
 - Features:
   - Quick Search: Search for projects on Printables or Thingiverse
   - More features coming soon!
-- **Author**: Cufiy (aka JMcrafter26) <https://cufiy.net>
+- **Author**: Cufiy
 - **License**: AGPL-3.0
 
 ## Installation Guide
