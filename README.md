@@ -1,6 +1,6 @@
 # Userscripts
 
-This repository contains my collection of userscripts that enhance the functionality of various websites.
+This is my personal collection of userscripts designed to enhance web browsing and development experiences. Each script is tailored for specific websites or functionalities, providing useful features and improvements.
 
 ## Table of Contents
 
@@ -36,7 +36,7 @@ This repository contains my collection of userscripts that enhance the functiona
 
 ### [JustLemmeDebug](./justlemmedebug/README.md)
 
-[![Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/)
+[![Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/562680-justlemmedebug/)
 [![GitHub](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/github/cozy.svg)](https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js)
 
 ```url
@@ -54,6 +54,7 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/ju
   - 🌐 **Universal** - Runs automatically on all websites
 
 - **Original Author**: Cufiy + deeeeone
+- [**More Details ➜**](./justlemmedebug/README.md)
 
 ### [Makerworld Enhancements](./makerworld-enhancements/README.md)
 

@@ -9,7 +9,7 @@
 
 ## 📦 Installation
 
-[![Install from Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/)
+[![Install from Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/562680-justlemmedebug)
 [![Install from GitHub](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/github/cozy.svg)](https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js)
 
 **Click the badges above to install**, or manually install from GitHub:
@@ -25,30 +25,36 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/ju
 ## ✨ Features
 
 ### 🔓 Bypass Anti-Debug Protection
+
 Allows developers to inspect and debug web pages without interference from anti-debugging techniques.
 
 ### 🛡️ Block Common Anti-Debug Techniques
+
 - Neutralizes `disable-devtool` scripts
 - Strips debugger statements from inline scripts
 - Blocks infinite/tamper debugger traps
 - Prevents forced page reloads
 
 ### 🧹 Clean Console Experience
+
 - Prevents `console.clear()` from erasing your debug output
 - Filters console table spam and log pollution
 - Blocks repetitive date/time spam
 - Removes empty error messages
 
 ### ⌨️ Restore Developer Controls
+
 - Removes keyboard shortcut restrictions (F12, Ctrl+Shift+I, etc.)
 - Restores right-click context menu
 - Bypasses copy/paste restrictions
 - Re-enables text selection
 
 ### 🔍 iframe Support
+
 Preserves console access in iframes, ensuring you can debug embedded content.
 
 ### 🌐 Universal Protection
+
 Runs automatically on **all websites**, providing consistent debugging capabilities everywhere you browse.
 
 ---
@@ -58,6 +64,7 @@ Runs automatically on **all websites**, providing consistent debugging capabilit
 Once installed, JustLemmeDebug works automatically in the background! No configuration needed.
 
 **What to expect:**
+
 - Developer tools will open normally without being blocked
 - Console will remain clean and readable
 - Right-click and keyboard shortcuts work as expected
@@ -94,6 +101,6 @@ This userscript is intended for **legitimate debugging and development purposes 
 
 <div align="center">
 
-⭐ Helpful for your debugging? [Star the repo](https://github.com/JMcrafter26/userscripts) • Made with ❤️ for developers
+⭐ Helpful for your debugging? <a href="https://github.com/JMcrafter26/userscripts">Star the repo</a> and <a href="https://greasyfork.org/en/scripts/562680-justlemmedebug">Rate it on Greasyfork</a> • Made with ❤️ for developers
 
 </div>
