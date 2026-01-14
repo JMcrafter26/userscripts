@@ -5,10 +5,12 @@
 // @icon           https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/icon.png?raw=true
 //
 // @author         Cufiy (aka JMcrafter26) <https://cufiy.net>
-// @namespace      https://github.com/JMcrafter26
+// @namespace      https://github.com/JMcrafter26/userscripts
 //
 // @downloadURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/makerworld-enhancements.user.js
 // @updateURL      https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/makerworld-enhancements.user.js
+// @supportURL     https://github.com/JMcrafter26/userscripts/issues
+// @homepageURL    https://github.com/JMcrafter26/userscripts/tree/main/makerworld-enhancements
 //
 // @license        AGPL-3.0
 // @copyright      Copyright (C) 2025, Cufiy
@@ -17,8 +19,6 @@
 // @match          https://makerworld.com.cn/*
 //
 // @run-at         document-end
-//
-// @resource       exampleImage https://www.example.com/example.png
 //
 // ==/UserScript==
 

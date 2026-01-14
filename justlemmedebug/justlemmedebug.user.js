@@ -1,13 +1,17 @@
 // ==UserScript==
 // @name         JustLemmeDebug
-// @namespace    http://github.com/deeeeone/userscripts
 // @version      2.0
 // @description  Disable anti-devtools techniques, block unwanted scripts, bypass debugger spammers, and filter console spam (dates, divs, empty errors)
 //
 // @author       Cufiy <https://cufiy.net> + deeeeone
+// @namespace      https://github.com/JMcrafter26/userscripts
 //
 // @downloadURL https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
 // @updateURL   https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
+// @supportURL  https://github.com/JMcrafter26/userscripts/issues
+// @homepageURL https://github.com/JMcrafter26/userscripts/tree/main/justlemmedebug
+//
+// @license      MIT
 //
 // @match        *://*/*
 // @run-at       document-start
