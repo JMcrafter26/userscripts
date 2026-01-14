@@ -9,8 +9,6 @@
 // @downloadURL https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
 // @updateURL   https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
 //
-// @license      AGPL-3.0
-//
 // @match        *://*/*
 // @run-at       document-start
 // @grant        none
