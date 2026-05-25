@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name           Makerworld Enhancements
 // @description    Enhancements for Makerworld website
-// @version        1.0.4
+// @version        1.1.0
 // @icon           https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/icon.png?raw=true
 //
 // @author         Cufiy (aka JMcrafter26) <https://cufiy.net>
@@ -31,6 +31,140 @@
 (function () {
 
     const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="16" width="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles-icon lucide-sparkles"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg>`;
+
+    const POINTS_RATE = 40 / 524;
+
+    function toEuros(pts) {
+        return (pts * POINTS_RATE).toFixed(2);
+    }
+
+    function parsePoints(text) {
+        const n = parseInt(text.replace(/[^0-9]/g, ''), 10);
+        return isNaN(n) ? null : n;
+    }
+
+    function findByText(needle) {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === 3 && node.textContent.trim() === needle) {
+                return node.parentElement;
+            }
+        }
+        return null;
+    }
+
+    function fixParentOverflow(el) {
+        let curr = el;
+        for (let i = 0; i < 3; i++) {
+            if (curr) {
+                curr.style.overflow = 'visible';
+                curr = curr.parentElement;
+            }
+        }
+    }
+
+    function makePointsPill(pts) {
+        const euros = toEuros(pts);
+        const pill = document.createElement('span');
+        pill.setAttribute('title', `${pts} pts \u00d7 (\u20ac40 \u00f7 524) = \u20ac${euros}`);
+        pill.innerHTML = `\u20ac\u00a0<b>\u2248\u00a0\u20ac${euros}</b>`;
+        Object.assign(pill.style, {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '4px 14px',
+            borderRadius: '999px',
+            background: 'rgba(56, 201, 110, 0.13)',
+            border: '1px solid rgba(56, 201, 110, 0.38)',
+            color: '#38c96e',
+            fontSize: '14px',
+            fontWeight: '600',
+            letterSpacing: '0.02em',
+            lineHeight: '1.4',
+            cursor: 'default',
+            fontFamily: 'inherit',
+            userSelect: 'none',
+            whiteSpace: 'nowrap',
+        });
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mwpe-label mwpe-pill';
+        Object.assign(wrapper.style, {
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+            marginTop: '10px',
+            position: 'relative',
+            zIndex: '10',
+        });
+        wrapper.appendChild(pill);
+        return wrapper;
+    }
+
+    function makePointsSubLabel(pts) {
+        const el = document.createElement('div');
+        el.className = 'mwpe-label mwpe-sub';
+        el.setAttribute('title', `${pts} pts = \u20ac${toEuros(pts)}`);
+        el.textContent = `\u2248 \u20ac${toEuros(pts)}`;
+        Object.assign(el.style, {
+            fontSize: '12px',
+            fontWeight: '500',
+            color: 'rgba(56, 201, 110, 0.85)',
+            marginTop: '3px',
+            fontFamily: 'inherit',
+            letterSpacing: '0.02em',
+            textAlign: 'center',
+            cursor: 'default',
+            userSelect: 'none',
+            position: 'relative',
+            zIndex: '10',
+            lineHeight: '1.2',
+        });
+        return el;
+    }
+
+    function isPointsPage() {
+        return /\/points/i.test(window.location.pathname);
+    }
+
+    function injectPointsLabels() {
+        if (!isPointsPage()) return false;
+        if (document.querySelector('.mwpe-label')) return true;
+
+        const totalLabelEl = findByText('Total Points');
+        if (totalLabelEl) {
+            const totalSection = totalLabelEl.parentElement;
+            const totalSpan = totalSection?.querySelector('span');
+            const totalPts = totalSpan ? parsePoints(totalSpan.textContent) : null;
+            if (totalPts !== null) {
+                fixParentOverflow(totalSection);
+                totalSection.style.paddingBottom = '6px';
+                totalLabelEl.insertAdjacentElement('afterend', makePointsPill(totalPts));
+            }
+        }
+
+        const injectSub = (labelText) => {
+            const labelEl = findByText(labelText);
+            if (!labelEl) return;
+            const section = labelEl.parentElement?.parentElement || labelEl.parentElement;
+            const span = section?.querySelector('span');
+            const pts = span ? parsePoints(span.textContent) : null;
+            if (pts !== null) {
+                fixParentOverflow(section);
+                labelEl.insertAdjacentElement('afterend', makePointsSubLabel(pts));
+            }
+        };
+
+        injectSub('Regular');
+        injectSub('Exclusive');
+
+        return true;
+    }
+
+    function handlePointsNavigation() {
+        document.querySelectorAll('.mwpe-label').forEach(el => el.remove());
+        setTimeout(injectPointsLabels, 250);
+    }
 
     function getEnhancementOptions(context = 'card') {
         const options = [
@@ -503,6 +637,8 @@
         console.log('Injected custom CSS for enhancement popover.');
     }
 
+    let pointsDebounceTimer;
+
     function addMutationObserver() {
         const observer = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
@@ -528,12 +664,30 @@
                                 addButtonGroupToModelView();
                             }
                         }
+                        if (isPointsPage() && !document.querySelector('.mwpe-label')) {
+                            clearTimeout(pointsDebounceTimer);
+                            pointsDebounceTimer = setTimeout(injectPointsLabels, 250);
+                        }
                     }
                 });
             });
         });
 
         observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function patchHistory() {
+        const _push = history.pushState;
+        history.pushState = function (...args) {
+            _push.apply(this, args);
+            handlePointsNavigation();
+        };
+        const _replace = history.replaceState;
+        history.replaceState = function (...args) {
+            _replace.apply(this, args);
+            handlePointsNavigation();
+        };
+        window.addEventListener('popstate', handlePointsNavigation);
     }
 
     function enhanceMakerworld() {
@@ -551,9 +705,11 @@
         }
         
         addMutationObserver();
-        
-        // Single event listener for closing popovers (event delegation)
-        document.addEventListener('click', (e) => {
+        patchHistory();
+
+        setTimeout(injectPointsLabels, 500);
+
+       document.addEventListener('click', (e) => {
             // Don't close if clicking on enhancement button
             if (e.target.closest('.enhancement-btn')) {
                 return;
