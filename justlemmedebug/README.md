@@ -78,10 +78,10 @@ Simply install the script and continue debugging as usual. The script silently n
 
 Contributions are welcome! Check out the [GitHub repository](https://github.com/JMcrafter26/userscripts) to:
 
-- 🐞 Report bugs or issues
-- 💡 Suggest new features
-- 🔧 Submit pull requests
-- 📖 Improve documentation
+- Report bugs or issues
+- Suggest new features
+- Submit pull requests
+- Improve documentation
 
 ---
 
