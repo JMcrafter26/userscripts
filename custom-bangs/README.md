@@ -9,7 +9,7 @@
 
 ## 📦 Installation
 
-[![Install from Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](#) <!-- Replace # with actual Greasyfork URL when published -->
+[![Install from Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/588027-custom-duckduckgo-bangs)
 [![Install from GitHub](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/github/cozy.svg)](https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js)
 
 **Click the badges above to install**, or manually install from GitHub:
@@ -28,7 +28,7 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/cust
 
 Create your own shortcuts with names, triggers, and target URLs. Organize them using built-in categories (Tech, Shopping, Research, News, etc.) for easy management.
 
-### External Bang Lists
+### External !Bang Lists
 
 Import bang collections via URLs (e.g., GitHub Gists). The script supports multiple lists, lets you set priority order, and auto-syncs them in the background daily.
 
@@ -56,8 +56,13 @@ Once installed, the script runs automatically on DuckDuckGo.
 2. Click **⚙️ Manage Custom Bangs**.
 3. Use the interface to add a new bang.
 
+Alternatively, you can also access the management interface by visiting `https://duckduckgo.com/bangs` in your browser and clicking on the floating **⚙️ Custom Bangs** button.
+
 * *Example Trigger:* `!gh`
 * *Example URL:* `https://github.com/search?q={{{s}}}` (The `{{{s}}}` acts as the placeholder for your search query).
+
+> [!TIP]
+> You can paste the URL directly from a search result page, and the script will automatically detect and replace the search query with `{{{s}}}`.
 
 **How to use bangs:**
 Search directly in the DuckDuckGo search bar as you normally would.
@@ -92,6 +97,6 @@ This userscript stores your custom bangs and settings locally in your browser vi
 
 <div align="center">
 
-⭐ Enjoying this script? [Star the repo](https://github.com/JMcrafter26/userscripts) and [Rate it on Greasyfork](https://greasyfork.org/en/scripts/) • Made with ❤️
+⭐ Enjoying this script? [Star the repo](https://github.com/JMcrafter26/userscripts) and [Rate it on Greasyfork](https://greasyfork.org/en/scripts/588027-custom-duckduckgo-bangs) • Made with ❤️
 
 </div>

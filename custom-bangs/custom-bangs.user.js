@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.3.0
-// @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones (Mobile Friendly + Categories)
+// @version      1.4.0
+// @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones (Mobile Friendly + Categories + URL Extract)
 // @author       Cufiy
 // @downloadURL  https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
@@ -293,7 +293,7 @@
             </select>
           </div>
           <div class="cb-row">
-            <input id="cb-in-url" placeholder="https://github.com/search?q={{{s}}}" />
+            <input id="cb-in-url" placeholder="https://github.com/search?q={{{s}}}" title="Paste a search URL here and we'll automatically replace the query with {{{s}}}!" />
           </div>
           <div class="cb-row">
             <input id="cb-in-example" placeholder="Example search, e.g. userscripts" />
@@ -342,11 +342,52 @@
     const listsEl = overlay.querySelector('#cb-lists');
     const ddgStatusEl = overlay.querySelector('#cb-ddg-status');
     const collisionToggle = overlay.querySelector('#cb-collision-toggle');
+    const urlInput = overlay.querySelector('#cb-in-url');
 
     collisionToggle.checked = getSettings().checkCollisions;
     collisionToggle.addEventListener('change', () => {
       saveSettings(Object.assign(getSettings(), { checkCollisions: collisionToggle.checked }));
       renderOwn(); renderLists();
+    });
+
+    // Auto-extract URL query parameter on paste
+    urlInput.addEventListener('paste', (e) => {
+      if (urlInput.value.trim() !== '') return; // Only process if input was previously empty
+      
+      const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+      if (!pastedText || pastedText.includes('{{{s}}}')) return;
+
+      try {
+        const urlObj = new URL(pastedText);
+        const queryParamsToLookFor = ['q', 'query', 'search', 's', 'term', 'keyword', 'k', 'p', 'text'];
+        let modified = false;
+
+        for (const param of queryParamsToLookFor) {
+          if (urlObj.searchParams.has(param)) {
+            urlObj.searchParams.set(param, '{{{s}}}');
+            modified = true;
+            break; 
+          }
+        }
+
+        // If no known query parameter was found but the url contains /search/something pattern, we can also replace that
+        if (!modified) {
+            const searchPathMatch = urlObj.pathname.match(/\/search\/([^\/]+)/);
+            if (searchPathMatch) {
+                urlObj.pathname = urlObj.pathname.replace(searchPathMatch[1], '{{{s}}}');
+                modified = true;
+            }
+        }
+
+        if (modified) {
+          e.preventDefault(); // Prevent standard pasting
+          // Convert URL object back to string, and unencode the curly brackets
+          urlInput.value = urlObj.toString().replace(/(?:%7B){3}s(?:%7D){3}/gi, '{{{s}}}');
+        }
+
+      } catch (err) {
+        // Not a valid URL, ignore and let standard paste happen
+      }
     });
 
     function renderDdgStatus() {
@@ -584,7 +625,7 @@
     renderLists();
   }
 
-  // ---------- Menu commands ----------
+  // ---------- Menu commands & Floating UI ----------
   function registerMenu() {
     GM_registerMenuCommand('⚙️ Manage Custom Bangs', openManager);
     GM_registerMenuCommand('🔄 Sync all external lists', () => {
@@ -595,10 +636,45 @@
     });
   }
 
+  function injectFloatingButton() {
+    if (location.pathname !== '/bangs') return;
+    if (document.getElementById('cb-floating-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'cb-floating-btn';
+    btn.textContent = '⚙️ Custom Bangs';
+    Object.assign(btn.style, {
+      position: 'fixed',
+      bottom: '24px',
+      right: '24px',
+      zIndex: '99999',
+      background: '#3574f0',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '24px',
+      padding: '12px 20px',
+      fontSize: '14px',
+      fontWeight: 'bold',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+      cursor: 'pointer',
+      fontFamily: '-apple-system, system-ui, sans-serif'
+    });
+
+    btn.addEventListener('mouseenter', () => btn.style.background = '#4a84f4');
+    btn.addEventListener('mouseleave', () => btn.style.background = '#3574f0');
+    btn.addEventListener('click', openManager);
+
+    document.body.appendChild(btn);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', registerMenu);
+    document.addEventListener('DOMContentLoaded', () => {
+      registerMenu();
+      injectFloatingButton();
+    });
   } else {
     registerMenu();
+    injectFloatingButton();
   }
 
   // ---------- Background auto-sync (once/day) ----------
