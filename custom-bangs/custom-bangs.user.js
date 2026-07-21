@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.6.2
+// @version      1.7.0
 // @description  Add your own !bangs to DuckDuckGo (and other search engines) without touching built-in ones
 // @author       Cufiy
 // @license      AGPL-3.0
@@ -81,8 +81,8 @@
   function findMatch(trigger, isDDG) {
     const t = trigger.toLowerCase();
     
-    // 1. Personal bangs
-    const own = getOwn().find(b => b.trigger.toLowerCase() === t);
+    // 1. Personal bangs (check primary and aliases)
+    const own = getOwn().find(b => b.trigger.toLowerCase() === t || (b.aliases && b.aliases.some(a => a.toLowerCase() === t)));
     if (own) return { source: 'own', bang: own };
 
     // 2. External lists
@@ -92,8 +92,7 @@
       if (found) return { source: 'list', listName: list.name, bang: found };
     }
 
-    // 3. Official DDG bangs (Only if on another engine and setting is enabled)
-    // We skip this on DDG natively to let DDG handle its own internal logic without redundant redirects
+    // 3. Official DDG bangs
     const settings = getSettings();
     if (!isDDG && settings.enableOtherEngines && settings.useDdgOfficial) {
       const ddgCache = getDdgCache();
@@ -117,7 +116,6 @@
     if (!isDDG && !settings.enableOtherEngines) return false;
 
     const params = new URLSearchParams(location.search);
-    // Look for common search parameters across engines (q: Google/Bing/DDG/Brave, p: Yahoo, query: Startpage)
     const q = ['q', 'p', 'query', 'text'].map(k => params.get(k)).find(Boolean);
     if (!q) return false;
 
@@ -191,9 +189,17 @@
     return new Map(getDdgCache().bangs.map(b => [b.trigger.toLowerCase(), b]));
   }
 
-  function ownCollision(trigger) {
-    if (!getSettings().checkCollisions) return null;
-    return officialTriggerMap().get(trigger.toLowerCase()) || null;
+  function ownCollisions(bang) {
+    if (!getSettings().checkCollisions) return [];
+    const offMap = officialTriggerMap();
+    const colls = [];
+    if (offMap.has(bang.trigger.toLowerCase())) colls.push(bang.trigger);
+    if (bang.aliases) {
+      for (const a of bang.aliases) {
+        if (offMap.has(a.toLowerCase())) colls.push(a);
+      }
+    }
+    return colls;
   }
 
   function listStats(list, allLists, ownBangs) {
@@ -201,7 +207,13 @@
     const idx = allLists.findIndex(l => l.id === list.id);
     const higherSets = allLists.slice(0, idx).filter(l => l.enabled)
       .map(l => new Set((l.bangs || []).map(b => b.trigger.toLowerCase())));
-    const ownSet = new Set(ownBangs.map(b => b.trigger.toLowerCase()));
+    
+    const ownSet = new Set();
+    ownBangs.forEach(b => {
+      ownSet.add(b.trigger.toLowerCase());
+      if (b.aliases) b.aliases.forEach(a => ownSet.add(a.toLowerCase()));
+    });
+    
     const official = settings.checkCollisions ? officialTriggerMap() : null;
 
     let shadowed = 0, officialCollisions = 0;
@@ -222,13 +234,13 @@
   .cb-modal h2{margin:0 0 16px;font-size:20px;}
   .cb-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
   .cb-row input, .cb-row select{flex:1;background:#111;border:1px solid #333;color:#eee;border-radius:8px;padding:8px 10px;font-size:14px;box-sizing:border-box;}
-  .cb-row input.cb-trigger{flex:0 0 90px;}
+  .cb-row input.cb-trigger{flex:0 0 160px;}
   .cb-list{max-height:260px;overflow:auto;margin-bottom:16px;border:1px solid #2a2a2a;border-radius:8px;}
   .cb-item{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;}
   .cb-item:last-child{border-bottom:none;}
   .cb-item-info{display:flex;flex:1;align-items:center;overflow:hidden;gap:8px;}
   .cb-item-actions{display:flex;gap:6px;flex-shrink:0;}
-  .cb-item .cb-trig{color:#7ab7ff;font-weight:600;width:70px;flex-shrink:0;}
+  .cb-item .cb-trig{color:#7ab7ff;font-weight:600;flex-shrink:0;white-space:nowrap;}
   .cb-item .cb-name{flex:1;color:#ccc;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;}
   .cb-item .cb-url{flex:2;color:#888;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cb-cat-badge{background:#333;padding:3px 6px;border-radius:4px;font-size:11px;margin-right:6px;color:#bbb;white-space:nowrap;}
@@ -307,7 +319,7 @@
           <div class="cb-list" id="cb-own-list"></div>
           
           <div class="cb-row">
-            <input class="cb-trigger" id="cb-in-trigger" placeholder="!gh" />
+            <input class="cb-trigger" id="cb-in-trigger" placeholder="!gh, !gith" title="Main bang, and optionally comma separated aliases" />
             <input id="cb-in-name" placeholder="Site name, e.g. GitHub" />
             <select id="cb-in-category">
               <option value="">Choose category</option>
@@ -433,7 +445,7 @@
       saveSettings(Object.assign(getSettings(), { syncInterval: parseInt(syncIntervalSel.value, 10) }));
     });
 
-    // Auto-extract URL query parameter on paste
+    // Auto-extract URL query parameter on paste & extract example string
     urlInput.addEventListener('paste', (e) => {
       if (urlInput.value.trim() !== '') return; 
       
@@ -441,30 +453,75 @@
       if (!pastedText || pastedText.includes('{{{s}}}')) return;
 
       try {
-        const urlObj = new URL(pastedText);
+        let urlObj = new URL(pastedText);
         const queryParamsToLookFor = ['q', 'query', 'search', 's', 'term', 'keyword', 'k', 'p', 'text'];
+        const magicKeywords = ['custombangs', '!custombangs', 'bangs', '!bangs', 'bang', '!bang'];
+        
         let modified = false;
+        let extractedQuery = '';
 
-        for (const param of queryParamsToLookFor) {
-          if (urlObj.searchParams.has(param)) {
-            urlObj.searchParams.set(param, '{{{s}}}');
+        // 1. Try to find the exact magic keywords in ANY query parameter
+        for (const [key, val] of urlObj.searchParams.entries()) {
+          if (magicKeywords.includes(val.toLowerCase())) {
+            extractedQuery = val;
+            urlObj.searchParams.set(key, '{{{s}}}');
             modified = true;
-            break; 
+            break;
           }
         }
 
-        // If no known query parameter was found but the url contains /search/something pattern, we can also replace that
+        // 2. If not found, try standard query parameters
+        if (!modified) {
+          for (const param of queryParamsToLookFor) {
+            if (urlObj.searchParams.has(param)) {
+              extractedQuery = urlObj.searchParams.get(param);
+              urlObj.searchParams.set(param, '{{{s}}}');
+              modified = true;
+              break; 
+            }
+          }
+        }
+
+        // 3. Fallback: Path matching for /search/something
         if (!modified) {
           const searchPathMatch = urlObj.pathname.match(/\/search\/([^\/]+)/);
           if (searchPathMatch) {
+            extractedQuery = decodeURIComponent(searchPathMatch[1]);
             urlObj.pathname = urlObj.pathname.replace(searchPathMatch[1], '{{{s}}}');
             modified = true;
+          }
+        }
+        
+        // 4. Fallback: Literal replacement of magic words anywhere in the URL string
+        if (!modified) {
+          let tempUrl = urlObj.toString();
+          for (const kw of magicKeywords) {
+            const encodedKw = encodeURIComponent(kw);
+            if (tempUrl.includes(encodedKw)) {
+              extractedQuery = kw;
+              tempUrl = tempUrl.replace(encodedKw, '{{{s}}}');
+              modified = true;
+              break;
+            } else if (tempUrl.includes(kw)) {
+              extractedQuery = kw;
+              tempUrl = tempUrl.replace(kw, '{{{s}}}');
+              modified = true;
+              break;
+            }
+          }
+          if (modified) {
+            urlObj = new URL(tempUrl);
           }
         }
 
         if (modified) {
           e.preventDefault(); 
           urlInput.value = urlObj.toString().replace(/(?:%7B){3}s(?:%7D){3}/gi, '{{{s}}}');
+          
+          const exampleInput = overlay.querySelector('#cb-in-example');
+          if (exampleInput && extractedQuery && exampleInput.value.trim() === '') {
+            exampleInput.value = extractedQuery;
+          }
         }
       } catch (err) {
         // Not a valid URL, ignore and let standard paste happen
@@ -493,16 +550,21 @@
         return;
       }
       ownListEl.innerHTML = own.map(b => {
-        const collision = ownCollision(b.trigger);
-        const warn = collision
-          ? `<span class="cb-warn" title="Overrides official DDG bang !${escapeHtml(b.trigger)} → ${escapeHtml(collision.url)}">⚠</span>`
+        const colls = ownCollisions(b);
+        const warn = colls.length
+          ? `<span class="cb-warn" title="Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}">⚠</span>`
           : '';
         const catBadge = b.category ? `<span class="cb-cat-badge">${escapeHtml(b.category)}</span>` : '';
         
+        let triggersDisplay = `!${escapeHtml(b.trigger)}`;
+        if (b.aliases && b.aliases.length > 0) {
+          triggersDisplay += `, ${b.aliases.map(a => `!${escapeHtml(a)}`).join(', ')}`;
+        }
+
         return `
         <div class="cb-item" data-id="${b.id}">
           <div class="cb-item-info">
-            <span class="cb-trig">!${escapeHtml(b.trigger)}</span>
+            <span class="cb-trig" title="Triggers">${triggersDisplay}</span>
             <span class="cb-name">${catBadge}${escapeHtml(b.name)}</span>
             <span class="cb-url">${escapeHtml(b.url)}</span>
             ${warn}
@@ -533,7 +595,13 @@
         window.open(buildTarget(bang.url, q), '_blank');
       } else if (btn.dataset.action === 'edit') {
         editBangId = bang.id;
-        overlay.querySelector('#cb-in-trigger').value = bang.trigger;
+        
+        let trigVal = `!${bang.trigger}`;
+        if (bang.aliases && bang.aliases.length) {
+          trigVal += ', ' + bang.aliases.map(a => `!${a}`).join(', ');
+        }
+        
+        overlay.querySelector('#cb-in-trigger').value = trigVal;
         overlay.querySelector('#cb-in-name').value = bang.name || '';
         overlay.querySelector('#cb-in-category').value = bang.category || '';
         overlay.querySelector('#cb-in-url').value = bang.url || '';
@@ -555,33 +623,60 @@
     });
 
     overlay.querySelector('#cb-add').addEventListener('click', () => {
-      const trigger = overlay.querySelector('#cb-in-trigger').value.trim().replace(/^!/, '');
+      const rawTrigger = overlay.querySelector('#cb-in-trigger').value.trim();
       const name = overlay.querySelector('#cb-in-name').value.trim();
       const category = overlay.querySelector('#cb-in-category').value;
       const url = overlay.querySelector('#cb-in-url').value.trim();
       const example = overlay.querySelector('#cb-in-example').value.trim();
       
-      if (!trigger || !url) { alert('Bang command and Bang URL are required.'); return; }
+      const triggerParts = rawTrigger.split(',').map(s => s.trim().replace(/^!/, '').toLowerCase()).filter(Boolean);
+
+      if (!triggerParts.length || !url) { alert('Bang command and Bang URL are required.'); return; }
       if (!url.includes('{{{s}}}') && !confirm('URL has no {{{s}}} placeholder — the query will just be appended. Continue?')) return;
 
+      const trigger = triggerParts[0];
+      const aliases = triggerParts.slice(1);
+
+      // Pre-save Collision Check
       const list = getOwn();
-      
+      const allLists = getLists();
+      const ddgCache = getDdgCache();
+      const checkSettings = getSettings();
+      let warnings = [];
+
+      for (const t of triggerParts) {
+        // Check own list
+        if (list.some(b => b.id !== editBangId && (b.trigger.toLowerCase() === t || (b.aliases || []).some(a => a.toLowerCase() === t)))) {
+          warnings.push(`!${t} is already used in your custom bangs.`);
+        }
+        // Check external lists
+        for (const extList of allLists) {
+          if (extList.enabled && (extList.bangs || []).some(b => b.trigger.toLowerCase() === t)) {
+            warnings.push(`!${t} overrides external list "${extList.name}".`);
+          }
+        }
+        // Check official list
+        if (checkSettings.checkCollisions && (ddgCache.bangs || []).some(b => b.trigger.toLowerCase() === t)) {
+          warnings.push(`!${t} overrides an official DuckDuckGo bang.`);
+        }
+      }
+
+      if (warnings.length > 0) {
+        if (!confirm(warnings.join('\n') + '\n\nDo you want to save anyway?')) return;
+      }
+
+      // Save routine
       if (editBangId) {
         const idx = list.findIndex(b => b.id === editBangId);
         if (idx >= 0) {
-          const conflictIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase() && b.id !== editBangId);
-          if (conflictIdx >= 0) {
-            alert('Another custom bang with this trigger already exists!');
-            return;
-          }
-          list[idx] = { id: editBangId, name, trigger, url, example, category };
+          list[idx] = { id: editBangId, name, trigger, aliases, url, example, category };
         }
         editBangId = null;
         overlay.querySelector('#cb-add').textContent = 'Add';
         overlay.querySelector('#cb-cancel-edit').style.display = 'none';
       } else {
         const existingIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase());
-        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, url, example, category };
+        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, aliases, url, example, category };
         if (existingIdx >= 0) list[existingIdx] = entry; else list.push(entry);
       }
 
