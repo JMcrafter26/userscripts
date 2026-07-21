@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.6.0
+// @version      1.6.1
 // @description  Add your own !bangs to DuckDuckGo (and other search engines) without touching built-in ones
 // @author       Cufiy
 // @license      AGPL-3.0
@@ -80,6 +80,10 @@
   // ---------- Matching & redirect ----------
   function findMatch(trigger, isDDG) {
     const t = trigger.toLowerCase();
+
+    // 0. Config page (aka !bangs)
+    if (t === 'config' || t === 'custombangs' || t === 'bangs') return { source: 'bangs' };
+
     
     // 1. Personal bangs
     const own = getOwn().find(b => b.trigger.toLowerCase() === t);
