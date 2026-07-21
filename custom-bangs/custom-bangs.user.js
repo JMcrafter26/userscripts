@@ -1,13 +1,10 @@
 // ==UserScript==
-// @name         Custom DuckDuckGo Bangs
+// @name         Custom DuckDuckGo Bangs (Group & Export Enhanced)
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.7.0
+// @version      1.8.0
 // @description  Add your own !bangs to DuckDuckGo (and other search engines) without touching built-in ones
 // @author       Cufiy
 // @license      AGPL-3.0
-// @copyright    Copyright (C) 2026, Cufiy
-// @downloadURL  https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
-// @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @match        https://duckduckgo.com/*
 // @match        https://*.duckduckgo.com/*
 // @match        https://*.google.com/search*
@@ -62,18 +59,44 @@
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+  function triggerDownload(filename, text) {
+    const el = document.createElement('a');
+    el.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(text));
+    el.setAttribute('download', filename);
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    el.click();
+    document.body.removeChild(el);
+  }
+
   // ---------- Shared parser ----------
   function normalizeRemoteBangs(rawText) {
     const data = JSON.parse(rawText);
     if (!Array.isArray(data)) throw new Error('Expected a JSON array');
     return data.map(item => {
+      let trig, name, url;
+      let aliases = [];
+      
       if (item.t !== undefined && item.u !== undefined) {
-        return { trigger: String(item.t).replace(/^!/, '').toLowerCase(), name: item.s || item.t, url: item.u };
+        trig = String(item.t); 
+        name = item.s || item.t; 
+        url = item.u;
+        if (item.a) aliases = Array.isArray(item.a) ? item.a : [item.a];
+      } else if (item.trigger !== undefined && item.url !== undefined) {
+        trig = String(item.trigger); 
+        name = item.name || item.trigger; 
+        url = item.url;
+        if (item.aliases) aliases = Array.isArray(item.aliases) ? item.aliases : [item.aliases];
+      } else {
+        return null;
       }
-      if (item.trigger !== undefined && item.url !== undefined) {
-        return { trigger: String(item.trigger).replace(/^!/, '').toLowerCase(), name: item.name || item.trigger, url: item.url };
-      }
-      return null;
+      
+      return { 
+        trigger: trig.replace(/^!/, '').toLowerCase(), 
+        name, 
+        url, 
+        aliases: aliases.map(a => String(a).replace(/^!/, '').toLowerCase()) 
+      };
     }).filter(Boolean);
   }
 
@@ -81,14 +104,20 @@
   function findMatch(trigger, isDDG) {
     const t = trigger.toLowerCase();
     
-    // 1. Personal bangs (check primary and aliases)
-    const own = getOwn().find(b => b.trigger.toLowerCase() === t || (b.aliases && b.aliases.some(a => a.toLowerCase() === t)));
+    // 1. Personal bangs (check primary and aliases, must be enabled)
+    const own = getOwn().find(b => 
+      b.enabled !== false && 
+      (b.trigger.toLowerCase() === t || (b.aliases && b.aliases.some(a => a.toLowerCase() === t)))
+    );
     if (own) return { source: 'own', bang: own };
 
-    // 2. External lists
+    // 2. External lists (check primary and aliases)
     for (const list of getLists()) {
       if (!list.enabled) continue;
-      const found = (list.bangs || []).find(b => b.trigger.toLowerCase() === t);
+      const found = (list.bangs || []).find(b => 
+        b.trigger.toLowerCase() === t || 
+        (b.aliases && b.aliases.some(a => a.toLowerCase() === t))
+      );
       if (found) return { source: 'list', listName: list.name, bang: found };
     }
 
@@ -190,7 +219,7 @@
   }
 
   function ownCollisions(bang) {
-    if (!getSettings().checkCollisions) return [];
+    if (!getSettings().checkCollisions || bang.enabled === false) return [];
     const offMap = officialTriggerMap();
     const colls = [];
     if (offMap.has(bang.trigger.toLowerCase())) colls.push(bang.trigger);
@@ -205,22 +234,33 @@
   function listStats(list, allLists, ownBangs) {
     const settings = getSettings();
     const idx = allLists.findIndex(l => l.id === list.id);
-    const higherSets = allLists.slice(0, idx).filter(l => l.enabled)
-      .map(l => new Set((l.bangs || []).map(b => b.trigger.toLowerCase())));
+    const higherSets = allLists.slice(0, idx).filter(l => l.enabled).map(l => new Set(
+      (l.bangs || []).flatMap(b => [b.trigger.toLowerCase(), ...(b.aliases || []).map(a => a.toLowerCase())])
+    ));
     
     const ownSet = new Set();
     ownBangs.forEach(b => {
-      ownSet.add(b.trigger.toLowerCase());
-      if (b.aliases) b.aliases.forEach(a => ownSet.add(a.toLowerCase()));
+      if (b.enabled !== false) {
+        ownSet.add(b.trigger.toLowerCase());
+        if (b.aliases) b.aliases.forEach(a => ownSet.add(a.toLowerCase()));
+      }
     });
     
     const official = settings.checkCollisions ? officialTriggerMap() : null;
 
     let shadowed = 0, officialCollisions = 0;
     for (const b of (list.bangs || [])) {
-      const t = b.trigger.toLowerCase();
-      if (ownSet.has(t) || higherSets.some(s => s.has(t))) shadowed++;
-      if (official && official.has(t)) officialCollisions++;
+      const triggers = [b.trigger.toLowerCase(), ...(b.aliases || []).map(a => a.toLowerCase())];
+      let isShadowed = false;
+      let isColliding = false;
+
+      for (const t of triggers) {
+         if (ownSet.has(t) || higherSets.some(s => s.has(t))) isShadowed = true;
+         if (official && official.has(t)) isColliding = true;
+      }
+      
+      if (isShadowed) shadowed++;
+      if (isColliding) officialCollisions++;
     }
     return { shadowed, officialCollisions, total: (list.bangs || []).length };
   }
@@ -229,15 +269,27 @@
   const STYLE = `
   .cb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999999;display:flex;
     align-items:flex-start;justify-content:center;padding:16px;overflow:auto;font-family:-apple-system,system-ui,sans-serif;box-sizing:border-box;}
-  .cb-modal{background:#181818;color:#eee;width:100%;max-width:780px;border-radius:12px;padding:24px;
+  .cb-modal{background:#181818;color:#eee;width:100%;max-width:820px;border-radius:12px;padding:24px;
     box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative;box-sizing:border-box;margin-bottom:40px;}
   .cb-modal h2{margin:0 0 16px;font-size:20px;}
   .cb-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
   .cb-row input, .cb-row select{flex:1;background:#111;border:1px solid #333;color:#eee;border-radius:8px;padding:8px 10px;font-size:14px;box-sizing:border-box;}
   .cb-row input.cb-trigger{flex:0 0 160px;}
-  .cb-list{max-height:260px;overflow:auto;margin-bottom:16px;border:1px solid #2a2a2a;border-radius:8px;}
+  .cb-list{max-height:360px;overflow:auto;margin-bottom:16px;border-radius:8px;}
+  
+  /* Group styles */
+  .cb-group{border:1px solid #2a2a2a;border-radius:8px;margin-bottom:12px;background:#141414;overflow:hidden;}
+  .cb-group-header{display:flex;align-items:center;padding:10px 12px;background:#1a1a1a;border-bottom:1px solid #2a2a2a;}
+  .cb-group-title{flex:1;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+  .cb-group-title h4{margin:0;font-size:14px;color:#eee;font-weight:600;}
+  .cb-group-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .cb-group.collapsed .cb-group-header{border-bottom:none;}
+  .cb-group.collapsed .cb-group-content{display:none;}
+  .cb-toggle-icon{color:#888;font-size:10px;width:12px;text-align:center;}
+  
   .cb-item{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;}
   .cb-item:last-child{border-bottom:none;}
+  .cb-item.disabled{opacity:0.45;}
   .cb-item-info{display:flex;flex:1;align-items:center;overflow:hidden;gap:8px;}
   .cb-item-actions{display:flex;gap:6px;flex-shrink:0;}
   .cb-item .cb-trig{color:#7ab7ff;font-weight:600;flex-shrink:0;white-space:nowrap;}
@@ -245,6 +297,7 @@
   .cb-item .cb-url{flex:2;color:#888;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .cb-cat-badge{background:#333;padding:3px 6px;border-radius:4px;font-size:11px;margin-right:6px;color:#bbb;white-space:nowrap;}
   .cb-warn{color:#e0b040;font-size:12px;cursor:help;}
+  
   .cb-btn{background:#2a2a2a;color:#eee;border:1px solid #3a3a3a;border-radius:8px;padding:8px 12px;
     font-size:13px;cursor:pointer;white-space:nowrap;box-sizing:border-box;}
   .cb-btn:hover{background:#333;}
@@ -259,6 +312,7 @@
   .cb-flex{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;}
   .cb-close{position:absolute;top:16px;right:20px;cursor:pointer;color:#888;font-size:24px;background:none;border:none;}
   .cb-small{color:#888;font-size:12px;margin-top:4px;}
+  
   .cb-listrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;flex-wrap:wrap;}
   .cb-listrow:last-child{border-bottom:none;}
   .cb-listrow.disabled{opacity:.45;}
@@ -269,7 +323,6 @@
     justify-content:center;font-size:11px;color:#888;flex-shrink:0;}
   .cb-toggle{width:18px;height:18px;flex-shrink:0;}
   
-  /* Mobile Responsiveness */
   @media (max-width: 650px) {
     .cb-modal { padding: 16px; }
     .cb-row { flex-direction: column; align-items: stretch; }
@@ -286,6 +339,8 @@
     .cb-flex { flex-direction: column; align-items: stretch; }
     .cb-flex button { width: 100%; }
     .cb-flex .cb-small { text-align: center; }
+    .cb-group-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .cb-group-actions { width: 100%; justify-content: space-between; }
   }
   `;
 
@@ -306,6 +361,7 @@
   function openManager() {
     injectStyle();
     let editBangId = null;
+    let collapsedGroups = new Set(); // To persist toggle state across renders while modal is open
 
     const overlay = document.createElement('div');
     overlay.className = 'cb-overlay';
@@ -316,13 +372,14 @@
 
         <div class="cb-section" style="margin-top:0;border-top:none;padding-top:0;">
           <h3>Your own bangs <span style="color:#666;">(always highest priority)</span></h3>
-          <div class="cb-list" id="cb-own-list"></div>
+          <div class="cb-list" id="cb-own-list" style="border:none;"></div>
           
           <div class="cb-row">
             <input class="cb-trigger" id="cb-in-trigger" placeholder="!gh, !gith" title="Main bang, and optionally comma separated aliases" />
             <input id="cb-in-name" placeholder="Site name, e.g. GitHub" />
-            <select id="cb-in-category">
-              <option value="">Choose category</option>
+            <input id="cb-in-group" placeholder="Group (e.g. Sync Gist)" title="Organize bangs for grouped exporting" style="flex:0 0 130px;" />
+            <select id="cb-in-category" style="flex:0 0 120px;">
+              <option value="">Category</option>
               <option value="Tech">Tech</option>
               <option value="Shopping">Shopping</option>
               <option value="Research">Research</option>
@@ -346,8 +403,8 @@
 
         <div class="cb-section">
           <h3>External bang lists</h3>
-          <div class="cb-hint">Checked in order below, after your own bangs. Drag priority with ↑/↓ — not the same as your own bangs, these come from someone else's index.</div>
-          <div class="cb-list" id="cb-lists"></div>
+          <div class="cb-hint">Checked in order below, after your own bangs. Drag priority with ↑/↓.</div>
+          <div class="cb-list" id="cb-lists" style="border:1px solid #2a2a2a;"></div>
           <div class="cb-row">
             <input id="cb-list-name" placeholder="List name, e.g. Someone's gist" style="flex:1;" />
             <input id="cb-list-url" placeholder="https://gist.githubusercontent.com/.../raw/bangs.json" style="flex:2;" />
@@ -390,7 +447,6 @@
 
         <div class="cb-section">
           <h3>Backup & Restore (Everything)</h3>
-          <div class="cb-hint">Export or import your entire configuration (own bangs, external lists, and settings) to easily copy it to another browser.</div>
           <textarea id="cb-json" placeholder='{"own": [], "lists": [], "settings": {}}'></textarea>
           <div class="cb-flex">
             <button class="cb-btn" id="cb-export-all">Export Everything</button>
@@ -415,7 +471,6 @@
     const settings = getSettings();
     collisionToggle.checked = settings.checkCollisions;
     syncIntervalSel.value = settings.syncInterval;
-    
     engineToggle.checked = settings.enableOtherEngines;
     ddgOfficialToggle.checked = settings.useDdgOfficial;
     
@@ -445,10 +500,8 @@
       saveSettings(Object.assign(getSettings(), { syncInterval: parseInt(syncIntervalSel.value, 10) }));
     });
 
-    // Auto-extract URL query parameter on paste & extract example string
     urlInput.addEventListener('paste', (e) => {
       if (urlInput.value.trim() !== '') return; 
-      
       const pastedText = (e.clipboardData || window.clipboardData).getData('text');
       if (!pastedText || pastedText.includes('{{{s}}}')) return;
 
@@ -460,7 +513,6 @@
         let modified = false;
         let extractedQuery = '';
 
-        // 1. Try to find the exact magic keywords in ANY query parameter
         for (const [key, val] of urlObj.searchParams.entries()) {
           if (magicKeywords.includes(val.toLowerCase())) {
             extractedQuery = val;
@@ -469,8 +521,6 @@
             break;
           }
         }
-
-        // 2. If not found, try standard query parameters
         if (!modified) {
           for (const param of queryParamsToLookFor) {
             if (urlObj.searchParams.has(param)) {
@@ -481,8 +531,6 @@
             }
           }
         }
-
-        // 3. Fallback: Path matching for /search/something
         if (!modified) {
           const searchPathMatch = urlObj.pathname.match(/\/search\/([^\/]+)/);
           if (searchPathMatch) {
@@ -491,41 +539,27 @@
             modified = true;
           }
         }
-        
-        // 4. Fallback: Literal replacement of magic words anywhere in the URL string
         if (!modified) {
           let tempUrl = urlObj.toString();
           for (const kw of magicKeywords) {
             const encodedKw = encodeURIComponent(kw);
             if (tempUrl.includes(encodedKw)) {
-              extractedQuery = kw;
-              tempUrl = tempUrl.replace(encodedKw, '{{{s}}}');
-              modified = true;
-              break;
+              extractedQuery = kw; tempUrl = tempUrl.replace(encodedKw, '{{{s}}}'); modified = true; break;
             } else if (tempUrl.includes(kw)) {
-              extractedQuery = kw;
-              tempUrl = tempUrl.replace(kw, '{{{s}}}');
-              modified = true;
-              break;
+              extractedQuery = kw; tempUrl = tempUrl.replace(kw, '{{{s}}}'); modified = true; break;
             }
           }
-          if (modified) {
-            urlObj = new URL(tempUrl);
-          }
+          if (modified) urlObj = new URL(tempUrl);
         }
-
         if (modified) {
           e.preventDefault(); 
           urlInput.value = urlObj.toString().replace(/(?:%7B){3}s(?:%7D){3}/gi, '{{{s}}}');
-          
           const exampleInput = overlay.querySelector('#cb-in-example');
           if (exampleInput && extractedQuery && exampleInput.value.trim() === '') {
             exampleInput.value = extractedQuery;
           }
         }
-      } catch (err) {
-        // Not a valid URL, ignore and let standard paste happen
-      }
+      } catch (err) {}
     });
 
     function renderDdgStatus() {
@@ -542,72 +576,151 @@
         .finally(() => { e.target.disabled = false; });
     });
 
-    // ---- Own bangs ----
+    // ---- Own bangs (Grouped) ----
     function renderOwn() {
       const own = getOwn();
       if (!own.length) {
-        ownListEl.innerHTML = '<div style="padding:16px;color:#666;font-size:13px;">No custom bangs yet.</div>';
+        ownListEl.innerHTML = '<div style="padding:16px;color:#666;font-size:13px;border:1px solid #2a2a2a;border-radius:8px;">No custom bangs yet.</div>';
         return;
       }
-      ownListEl.innerHTML = own.map(b => {
-        const colls = ownCollisions(b);
-        const warn = colls.length
-          ? `<span class="cb-warn" title="Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}">⚠</span>`
-          : '';
-        const catBadge = b.category ? `<span class="cb-cat-badge">${escapeHtml(b.category)}</span>` : '';
-        
-        let triggersDisplay = `!${escapeHtml(b.trigger)}`;
-        if (b.aliases && b.aliases.length > 0) {
-          triggersDisplay += `, ${b.aliases.map(a => `!${escapeHtml(a)}`).join(', ')}`;
-        }
+
+      const groups = {};
+      own.forEach(b => {
+         const gName = b.group && b.group.trim() ? b.group : 'Default';
+         if (!groups[gName]) groups[gName] = [];
+         groups[gName].push(b);
+      });
+
+      ownListEl.innerHTML = Object.entries(groups).map(([gName, items]) => {
+        const isCollapsed = collapsedGroups.has(gName);
+        const allDisabled = items.every(b => b.enabled === false);
+
+        const itemsHtml = items.map(b => {
+          const colls = ownCollisions(b);
+          const warn = colls.length
+            ? `<span class="cb-warn" title="Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}">⚠</span>`
+            : '';
+          const catBadge = b.category ? `<span class="cb-cat-badge">${escapeHtml(b.category)}</span>` : '';
+          
+          let triggersDisplay = `!${escapeHtml(b.trigger)}`;
+          if (b.aliases && b.aliases.length > 0) {
+            triggersDisplay += `, ${b.aliases.map(a => `!${escapeHtml(a)}`).join(', ')}`;
+          }
+
+          return `
+          <div class="cb-item ${b.enabled === false ? 'disabled' : ''}" data-id="${b.id}">
+            <div class="cb-item-info">
+              <span class="cb-trig" title="Triggers">${triggersDisplay}</span>
+              <span class="cb-name">${catBadge}${escapeHtml(b.name)}</span>
+              <span class="cb-url">${escapeHtml(b.url)}</span>
+              ${warn}
+            </div>
+            <div class="cb-item-actions">
+              <button class="cb-btn" data-action="test">Test</button>
+              <button class="cb-btn" data-action="edit">Edit</button>
+              <button class="cb-btn danger" data-action="delete">Delete</button>
+            </div>
+          </div>`;
+        }).join('');
 
         return `
-        <div class="cb-item" data-id="${b.id}">
-          <div class="cb-item-info">
-            <span class="cb-trig" title="Triggers">${triggersDisplay}</span>
-            <span class="cb-name">${catBadge}${escapeHtml(b.name)}</span>
-            <span class="cb-url">${escapeHtml(b.url)}</span>
-            ${warn}
+        <div class="cb-group ${isCollapsed ? 'collapsed' : ''}" data-group="${escapeHtml(gName)}">
+          <div class="cb-group-header">
+             <div class="cb-group-title">
+               <span class="cb-toggle-icon">${isCollapsed ? '▶' : '▼'}</span>
+               <h4>${escapeHtml(gName)}</h4>
+               <span class="cb-lmeta" style="font-size:11px;color:#888;">${items.length} bang${items.length === 1 ? '' : 's'}</span>
+             </div>
+             <div class="cb-group-actions">
+               <button class="cb-btn" data-action="toggle-group">${allDisabled ? 'Enable Group' : 'Disable Group'}</button>
+               <button class="cb-btn" data-action="edit-group">Edit Name</button>
+               <button class="cb-btn" data-action="export-group">Export</button>
+               <button class="cb-btn danger" data-action="delete-group">Delete</button>
+             </div>
           </div>
-          <div class="cb-item-actions">
-            <button class="cb-btn" data-action="test">Test</button>
-            <button class="cb-btn" data-action="edit">Edit</button>
-            <button class="cb-btn danger" data-action="delete">Delete</button>
+          <div class="cb-group-content">
+             ${itemsHtml}
           </div>
         </div>`;
       }).join('');
     }
 
     ownListEl.addEventListener('click', (e) => {
+      const groupTitle = e.target.closest('.cb-group-title');
+      if (groupTitle) {
+        const gName = groupTitle.closest('.cb-group').dataset.group;
+        if (collapsedGroups.has(gName)) collapsedGroups.delete(gName);
+        else collapsedGroups.add(gName);
+        renderOwn();
+        return;
+      }
+
       const btn = e.target.closest('button');
       if (!btn) return;
-      const item = e.target.closest('.cb-item');
-      const id = item.dataset.id;
-      const own = getOwn();
-      const bang = own.find(b => b.id === id);
+      
+      let own = getOwn();
+      const groupEl = e.target.closest('.cb-group');
+      const gName = groupEl ? groupEl.dataset.group : null;
+      const action = btn.dataset.action;
 
-      if (btn.dataset.action === 'delete') {
-        if (editBangId === id) overlay.querySelector('#cb-cancel-edit').click();
-        saveOwn(own.filter(b => b.id !== id));
-        renderOwn(); renderLists();
-      } else if (btn.dataset.action === 'test') {
-        const q = bang.example || 'test';
-        window.open(buildTarget(bang.url, q), '_blank');
-      } else if (btn.dataset.action === 'edit') {
-        editBangId = bang.id;
-        
-        let trigVal = `!${bang.trigger}`;
-        if (bang.aliases && bang.aliases.length) {
-          trigVal += ', ' + bang.aliases.map(a => `!${a}`).join(', ');
+      if (action === 'toggle-group') {
+        const items = own.filter(b => (b.group && b.group.trim() ? b.group : 'Default') === gName);
+        const allDisabled = items.every(b => b.enabled === false);
+        own.forEach(b => { if ((b.group && b.group.trim() ? b.group : 'Default') === gName) b.enabled = allDisabled; });
+        saveOwn(own); renderOwn(); renderLists();
+      } else if (action === 'delete-group') {
+        if (!confirm(`Delete group "${gName}" and all its bangs?`)) return;
+        own = own.filter(b => (b.group && b.group.trim() ? b.group : 'Default') !== gName);
+        saveOwn(own); renderOwn(); renderLists();
+      } else if (action === 'edit-group') {
+        const newName = prompt('Enter new group name:', gName);
+        if (newName !== null && newName.trim() !== '') {
+          own.forEach(b => { if ((b.group && b.group.trim() ? b.group : 'Default') === gName) b.group = newName.trim(); });
+          if (collapsedGroups.has(gName)) {
+            collapsedGroups.delete(gName);
+            collapsedGroups.add(newName.trim());
+          }
+          saveOwn(own); renderOwn(); renderLists();
         }
-        
-        overlay.querySelector('#cb-in-trigger').value = trigVal;
-        overlay.querySelector('#cb-in-name').value = bang.name || '';
-        overlay.querySelector('#cb-in-category').value = bang.category || '';
-        overlay.querySelector('#cb-in-url').value = bang.url || '';
-        overlay.querySelector('#cb-in-example').value = bang.example || '';
-        overlay.querySelector('#cb-add').textContent = 'Save Edit';
-        overlay.querySelector('#cb-cancel-edit').style.display = 'inline-block';
+      } else if (action === 'export-group') {
+        const items = own.filter(b => (b.group && b.group.trim() ? b.group : 'Default') === gName);
+        const exportData = items.map(b => ({
+          name: b.name,
+          trigger: b.trigger,
+          aliases: b.aliases || [],
+          url: b.url,
+          category: b.category
+        }));
+        triggerDownload(gName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_bangs.json", JSON.stringify(exportData, null, 2));
+      } else {
+        const item = e.target.closest('.cb-item');
+        if (!item) return;
+        const id = item.dataset.id;
+        const bang = own.find(b => b.id === id);
+
+        if (action === 'delete') {
+          if (editBangId === id) overlay.querySelector('#cb-cancel-edit').click();
+          saveOwn(own.filter(b => b.id !== id));
+          renderOwn(); renderLists();
+        } else if (action === 'test') {
+          const q = bang.example || 'test';
+          window.open(buildTarget(bang.url, q), '_blank');
+        } else if (action === 'edit') {
+          editBangId = bang.id;
+          let trigVal = `!${bang.trigger}`;
+          if (bang.aliases && bang.aliases.length) {
+            trigVal += ', ' + bang.aliases.map(a => `!${a}`).join(', ');
+          }
+          
+          overlay.querySelector('#cb-in-trigger').value = trigVal;
+          overlay.querySelector('#cb-in-name').value = bang.name || '';
+          overlay.querySelector('#cb-in-group').value = bang.group || '';
+          overlay.querySelector('#cb-in-category').value = bang.category || '';
+          overlay.querySelector('#cb-in-url').value = bang.url || '';
+          overlay.querySelector('#cb-in-example').value = bang.example || '';
+          overlay.querySelector('#cb-add').textContent = 'Save Edit';
+          overlay.querySelector('#cb-cancel-edit').style.display = 'inline-block';
+        }
       }
     });
 
@@ -615,6 +728,7 @@
       editBangId = null;
       overlay.querySelector('#cb-in-trigger').value = '';
       overlay.querySelector('#cb-in-name').value = '';
+      overlay.querySelector('#cb-in-group').value = '';
       overlay.querySelector('#cb-in-category').value = '';
       overlay.querySelector('#cb-in-url').value = '';
       overlay.querySelector('#cb-in-example').value = '';
@@ -625,6 +739,7 @@
     overlay.querySelector('#cb-add').addEventListener('click', () => {
       const rawTrigger = overlay.querySelector('#cb-in-trigger').value.trim();
       const name = overlay.querySelector('#cb-in-name').value.trim();
+      const group = overlay.querySelector('#cb-in-group').value.trim();
       const category = overlay.querySelector('#cb-in-category').value;
       const url = overlay.querySelector('#cb-in-url').value.trim();
       const example = overlay.querySelector('#cb-in-example').value.trim();
@@ -645,17 +760,14 @@
       let warnings = [];
 
       for (const t of triggerParts) {
-        // Check own list
         if (list.some(b => b.id !== editBangId && (b.trigger.toLowerCase() === t || (b.aliases || []).some(a => a.toLowerCase() === t)))) {
           warnings.push(`!${t} is already used in your custom bangs.`);
         }
-        // Check external lists
         for (const extList of allLists) {
-          if (extList.enabled && (extList.bangs || []).some(b => b.trigger.toLowerCase() === t)) {
+          if (extList.enabled && (extList.bangs || []).some(b => b.trigger.toLowerCase() === t || (b.aliases && b.aliases.some(a => a.toLowerCase() === t)))) {
             warnings.push(`!${t} overrides external list "${extList.name}".`);
           }
         }
-        // Check official list
         if (checkSettings.checkCollisions && (ddgCache.bangs || []).some(b => b.trigger.toLowerCase() === t)) {
           warnings.push(`!${t} overrides an official DuckDuckGo bang.`);
         }
@@ -665,24 +777,28 @@
         if (!confirm(warnings.join('\n') + '\n\nDo you want to save anyway?')) return;
       }
 
-      // Save routine
       if (editBangId) {
         const idx = list.findIndex(b => b.id === editBangId);
         if (idx >= 0) {
-          list[idx] = { id: editBangId, name, trigger, aliases, url, example, category };
+          const currentEnabled = list[idx].enabled !== false;
+          list[idx] = { id: editBangId, name, trigger, aliases, url, example, category, group, enabled: currentEnabled };
         }
         editBangId = null;
         overlay.querySelector('#cb-add').textContent = 'Add';
         overlay.querySelector('#cb-cancel-edit').style.display = 'none';
       } else {
         const existingIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase());
-        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, aliases, url, example, category };
+        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, aliases, url, example, category, group, enabled: true };
         if (existingIdx >= 0) list[existingIdx] = entry; else list.push(entry);
       }
+
+      // If they created a new group while it was collapsed, unfold it for them automatically
+      if (group && collapsedGroups.has(group)) collapsedGroups.delete(group);
 
       saveOwn(list);
       overlay.querySelector('#cb-in-trigger').value = '';
       overlay.querySelector('#cb-in-name').value = '';
+      overlay.querySelector('#cb-in-group').value = '';
       overlay.querySelector('#cb-in-category').value = '';
       overlay.querySelector('#cb-in-url').value = '';
       overlay.querySelector('#cb-in-example').value = '';
@@ -711,22 +827,14 @@
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw);
-        
-        if (Array.isArray(parsed)) {
-          throw new Error('This looks like a list of bangs (v1 export). Please wrap it in {"own": [...]} or re-export from the new version.');
-        }
-        
-        if (!parsed.own || !parsed.lists) {
-          throw new Error('Invalid format. Expected "own" and "lists" arrays.');
-        }
-
+        if (Array.isArray(parsed)) throw new Error('This looks like a list of bangs (v1 export). Please wrap it in {"own": [...]} or re-export from the new version.');
+        if (!parsed.own || !parsed.lists) throw new Error('Invalid format. Expected "own" and "lists" arrays.');
         if (!confirm(`This will OVERWRITE your entire Custom Bangs configuration (including external lists and settings). Continue?`)) return;
         
         saveOwn(parsed.own);
         saveLists(parsed.lists);
         if (parsed.settings) saveSettings(Object.assign(getSettings(), parsed.settings));
         
-        // Sync UI toggles with new settings
         const newSettings = getSettings();
         overlay.querySelector('#cb-collision-toggle').checked = newSettings.checkCollisions;
         overlay.querySelector('#cb-sync-interval').value = newSettings.syncInterval;
@@ -734,14 +842,10 @@
         overlay.querySelector('#cb-ddg-official-toggle').checked = newSettings.useDdgOfficial;
         updateDdgOfficialState();
         
-        renderOwn(); 
-        renderLists();
-        
+        renderOwn(); renderLists();
         alert('Data imported successfully!');
         overlay.querySelector('#cb-json').value = '';
-      } catch (e) { 
-        alert('Import failed: ' + e.message); 
-      }
+      } catch (e) { alert('Import failed: ' + e.message); }
     });
 
     // ---- External lists ----
@@ -770,6 +874,7 @@
           <button class="cb-btn" data-action="up" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button class="cb-btn" data-action="down" ${i === lists.length - 1 ? 'disabled' : ''}>↓</button>
           <button class="cb-btn" data-action="sync">Sync</button>
+          <button class="cb-btn" data-action="export">Export</button>
           <button class="cb-btn danger" data-action="remove">Remove</button>
         </div>`;
       }).join('');
@@ -787,20 +892,22 @@
 
       if (action === 'toggle') {
         lists[idx].enabled = btn.checked;
-        saveLists(lists); renderLists();
+        saveLists(lists); renderLists(); renderOwn();
       } else if (action === 'up' && idx > 0) {
         [lists[idx - 1], lists[idx]] = [lists[idx], lists[idx - 1]];
-        saveLists(lists); renderLists();
+        saveLists(lists); renderLists(); renderOwn();
       } else if (action === 'down' && idx < lists.length - 1) {
         [lists[idx + 1], lists[idx]] = [lists[idx], lists[idx + 1]];
-        saveLists(lists); renderLists();
+        saveLists(lists); renderLists(); renderOwn();
       } else if (action === 'remove') {
         if (!confirm(`Remove "${lists[idx].name}"?`)) return;
         lists.splice(idx, 1);
-        saveLists(lists); renderLists();
+        saveLists(lists); renderLists(); renderOwn();
+      } else if (action === 'export') {
+        triggerDownload(lists[idx].name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_bangs.json", JSON.stringify(lists[idx].bangs, null, 2));
       } else if (action === 'sync') {
         btn.disabled = true;
-        syncList(id).then(() => renderLists()).finally(() => { btn.disabled = false; });
+        syncList(id).then(() => { renderLists(); renderOwn(); }).finally(() => { btn.disabled = false; });
       }
     });
 
@@ -815,7 +922,7 @@
       overlay.querySelector('#cb-list-name').value = '';
       overlay.querySelector('#cb-list-url').value = '';
       renderLists();
-      syncList(entry.id).then(() => renderLists());
+      syncList(entry.id).then(() => { renderLists(); renderOwn(); });
     });
 
     overlay.querySelector('.cb-close').addEventListener('click', () => overlay.remove());
