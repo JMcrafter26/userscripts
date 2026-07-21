@@ -44,16 +44,17 @@ This is my personal collection of userscripts designed to enhance web browsing a
 https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 ```
 
-**Add your own `!bangs` to DuckDuckGo without touching the built-in ones.** This userscript provides a fully featured, mobile-friendly interface to manage custom search shortcuts, sync external lists.
+**Add your own `!bangs` to DuckDuckGo (and other search engines!) without touching the built-in ones.** This userscript provides a fully featured, mobile-friendly interface to manage custom search shortcuts and sync external lists.
 
 - **Features:**
-  - **Personal Custom Bangs** - Create your own shortcuts with names, triggers, and target URLs. Organize them using built-in categories (Tech, Shopping, Research, News, etc.) for easy management.
-  - **External !Bang Lists** - Import bang collections via URLs (e.g., GitHub Gists). The script supports multiple lists, lets you set priority order, and auto-syncs them in the background daily.
-  - **Mobile-Friendly UI** - The entire management interface is responsive, ensuring you can add, edit, or delete bangs easily on both desktop and mobile devices.
+  - **Universal Search Support** - Use your custom bangs (and official DuckDuckGo bangs) directly on Google, Bing, Yahoo, Startpage, Brave, and more.
+  - **Personal Custom Bangs** - Create your own shortcuts with names, triggers, and target URLs, neatly organized by category.
+  - **External Lists & Sync** - Import bang collections via URLs, set priority orders, and configure background auto-sync intervals.
+  - **Mobile-Friendly UI & Backup** - Manage your custom shortcuts easily on any device, and import/export your entire configuration to switch browsers instantly.
 
 - **Author**: Cufiy
 - **License**: AGPL-3.0
-- [**More Details ➜**](./custom-bangs/README.md)
+- **[More Details ➜](https://www.google.com/search?q=./custom-bangs/README.md)**
 
 ### [JustLemmeDebug](./justlemmedebug/README.md)
 

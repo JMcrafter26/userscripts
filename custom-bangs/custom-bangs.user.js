@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.5.0
-// @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones (Mobile Friendly + Categories + URL Extract)
+// @version      1.6.0
+// @description  Add your own !bangs to DuckDuckGo (and other search engines) without touching built-in ones
 // @author       Cufiy
 // @license      AGPL-3.0
 // @copyright    Copyright (C) 2026, Cufiy
@@ -10,6 +10,16 @@
 // @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @match        https://duckduckgo.com/*
 // @match        https://*.duckduckgo.com/*
+// @match        https://*.google.com/search*
+// @match        https://*.bing.com/search*
+// @match        https://*.yahoo.com/search*
+// @match        https://search.yahoo.com/search*
+// @match        https://*.startpage.com/sp/search*
+// @match        https://*.startpage.com/do/dsearch*
+// @match        https://search.brave.com/search*
+// @match        https://*.ecosia.org/search*
+// @match        https://*.qwant.com/?*
+// @match        https://kagi.com/search*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
@@ -25,10 +35,10 @@
 (function () {
   'use strict';
 
-  const OWN_KEY = 'customBangs';           // [{id, name, trigger, url, example, category}]
-  const LISTS_KEY = 'externalLists';       // [{id, name, url, enabled, bangs:[{trigger,name,url}], lastSync}] — array order = priority
-  const SETTINGS_KEY = 'cbSettings';       // {checkCollisions:true, syncInterval:24}
-  const DDG_CACHE_KEY = 'ddgOfficialCache';// {bangs:[{trigger,name,url}], lastFetched}
+  const OWN_KEY = 'customBangs';
+  const LISTS_KEY = 'externalLists';
+  const SETTINGS_KEY = 'cbSettings';       // {checkCollisions, syncInterval, enableOtherEngines, useDdgOfficial}
+  const DDG_CACHE_KEY = 'ddgOfficialCache';
 
   // ---------- Storage helpers ----------
   function getOwn() { try { return JSON.parse(GM_getValue(OWN_KEY, '[]')); } catch (e) { return []; } }
@@ -38,8 +48,9 @@
   function saveLists(list) { GM_setValue(LISTS_KEY, JSON.stringify(list)); }
 
   function getSettings() {
-    try { return Object.assign({ checkCollisions: true, syncInterval: 24 }, JSON.parse(GM_getValue(SETTINGS_KEY, '{}'))); }
-    catch (e) { return { checkCollisions: true, syncInterval: 24 }; }
+    const defaults = { checkCollisions: true, syncInterval: 24, enableOtherEngines: true, useDdgOfficial: true };
+    try { return Object.assign(defaults, JSON.parse(GM_getValue(SETTINGS_KEY, '{}'))); }
+    catch (e) { return defaults; }
   }
   function saveSettings(s) { GM_setValue(SETTINGS_KEY, JSON.stringify(s)); }
 
@@ -67,16 +78,29 @@
   }
 
   // ---------- Matching & redirect ----------
-  function findMatch(trigger) {
+  function findMatch(trigger, isDDG) {
     const t = trigger.toLowerCase();
+    
+    // 1. Personal bangs
     const own = getOwn().find(b => b.trigger.toLowerCase() === t);
     if (own) return { source: 'own', bang: own };
 
+    // 2. External lists
     for (const list of getLists()) {
       if (!list.enabled) continue;
       const found = (list.bangs || []).find(b => b.trigger.toLowerCase() === t);
       if (found) return { source: 'list', listName: list.name, bang: found };
     }
+
+    // 3. Official DDG bangs (Only if on another engine and setting is enabled)
+    // We skip this on DDG natively to let DDG handle its own internal logic without redundant redirects
+    const settings = getSettings();
+    if (!isDDG && settings.enableOtherEngines && settings.useDdgOfficial) {
+      const ddgCache = getDdgCache();
+      const foundOfficial = (ddgCache.bangs || []).find(b => b.trigger.toLowerCase() === t);
+      if (foundOfficial) return { source: 'official', bang: foundOfficial };
+    }
+
     return null;
   }
 
@@ -87,14 +111,20 @@
   }
 
   function tryRedirect() {
+    const isDDG = location.hostname.includes('duckduckgo.com');
+    const settings = getSettings();
+    
+    if (!isDDG && !settings.enableOtherEngines) return false;
+
     const params = new URLSearchParams(location.search);
-    const q = params.get('q');
+    // Look for common search parameters across engines (q: Google/Bing/DDG/Brave, p: Yahoo, query: Startpage)
+    const q = ['q', 'p', 'query', 'text'].map(k => params.get(k)).find(Boolean);
     if (!q) return false;
 
     const match = q.match(/(^|\s)!(\S+)/);
     if (!match) return false;
 
-    const hit = findMatch(match[2]);
+    const hit = findMatch(match[2], isDDG);
     if (!hit) return false; 
 
     const rest = q.replace(match[0], ' ').trim().replace(/\s+/g, ' ');
@@ -315,10 +345,21 @@
 
         <div class="cb-section">
           <h3>Settings & Sync</h3>
+          
+          <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center;">
+            <input type="checkbox" id="cb-engine-toggle" style="flex:0 0 auto;width:18px;height:18px;" />
+            <label for="cb-engine-toggle" style="font-size:13px;color:#ccc;line-height:1.4;cursor:pointer;">Enable Custom Bangs on other search engines (Google, Bing, Yahoo, Startpage, etc.)</label>
+          </div>
+          <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center; padding-left: 26px;">
+            <input type="checkbox" id="cb-ddg-official-toggle" style="flex:0 0 auto;width:18px;height:18px;" />
+            <label for="cb-ddg-official-toggle" style="font-size:13px;color:#ccc;line-height:1.4;cursor:pointer;">Use official DuckDuckGo bangs on other search engines</label>
+          </div>
+
           <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center;">
             <input type="checkbox" id="cb-collision-toggle" style="flex:0 0 auto;width:18px;height:18px;" />
             <label for="cb-collision-toggle" style="font-size:13px;color:#ccc;line-height:1.4;cursor:pointer;">Warn when a bang collides with DuckDuckGo's official list</label>
           </div>
+
           <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center; max-width: 350px;">
             <label for="cb-sync-interval" style="font-size:13px;color:#ccc;white-space:nowrap;">Auto-sync interval:</label>
             <select id="cb-sync-interval" style="margin-left: 10px;">
@@ -328,6 +369,7 @@
               <option value="168">Weekly</option>
             </select>
           </div>
+
           <div class="cb-flex">
             <button class="cb-btn" id="cb-ddg-refresh">Refresh official DDG bang cache</button>
             <span class="cb-small" id="cb-ddg-status"></span>
@@ -351,6 +393,9 @@
     const listsEl = overlay.querySelector('#cb-lists');
     const ddgStatusEl = overlay.querySelector('#cb-ddg-status');
     const collisionToggle = overlay.querySelector('#cb-collision-toggle');
+    const engineToggle = overlay.querySelector('#cb-engine-toggle');
+    const ddgOfficialToggle = overlay.querySelector('#cb-ddg-official-toggle');
+    const ddgOfficialLabel = overlay.querySelector('label[for="cb-ddg-official-toggle"]');
     const syncIntervalSel = overlay.querySelector('#cb-sync-interval');
     const urlInput = overlay.querySelector('#cb-in-url');
 
@@ -358,10 +403,30 @@
     const settings = getSettings();
     collisionToggle.checked = settings.checkCollisions;
     syncIntervalSel.value = settings.syncInterval;
+    
+    engineToggle.checked = settings.enableOtherEngines;
+    ddgOfficialToggle.checked = settings.useDdgOfficial;
+    
+    function updateDdgOfficialState() {
+      ddgOfficialToggle.disabled = !engineToggle.checked;
+      ddgOfficialLabel.style.opacity = engineToggle.checked ? '1' : '0.5';
+      if (!engineToggle.checked) ddgOfficialToggle.checked = false;
+    }
+    updateDdgOfficialState();
 
     collisionToggle.addEventListener('change', () => {
       saveSettings(Object.assign(getSettings(), { checkCollisions: collisionToggle.checked }));
       renderOwn(); renderLists();
+    });
+
+    engineToggle.addEventListener('change', () => {
+      saveSettings(Object.assign(getSettings(), { enableOtherEngines: engineToggle.checked }));
+      updateDdgOfficialState();
+      saveSettings(Object.assign(getSettings(), { useDdgOfficial: ddgOfficialToggle.checked }));
+    });
+
+    ddgOfficialToggle.addEventListener('change', () => {
+      saveSettings(Object.assign(getSettings(), { useDdgOfficial: ddgOfficialToggle.checked }));
     });
 
     syncIntervalSel.addEventListener('change', () => {
@@ -552,7 +617,6 @@
       try {
         const parsed = JSON.parse(raw);
         
-        // Validation check for general format (if it's an array, user might be trying to import old v1 format)
         if (Array.isArray(parsed)) {
           throw new Error('This looks like a list of bangs (v1 export). Please wrap it in {"own": [...]} or re-export from the new version.');
         }
@@ -565,11 +629,15 @@
         
         saveOwn(parsed.own);
         saveLists(parsed.lists);
-        if (parsed.settings) saveSettings(parsed.settings);
+        if (parsed.settings) saveSettings(Object.assign(getSettings(), parsed.settings));
         
         // Sync UI toggles with new settings
-        overlay.querySelector('#cb-collision-toggle').checked = getSettings().checkCollisions;
-        overlay.querySelector('#cb-sync-interval').value = getSettings().syncInterval;
+        const newSettings = getSettings();
+        overlay.querySelector('#cb-collision-toggle').checked = newSettings.checkCollisions;
+        overlay.querySelector('#cb-sync-interval').value = newSettings.syncInterval;
+        overlay.querySelector('#cb-engine-toggle').checked = newSettings.enableOtherEngines;
+        overlay.querySelector('#cb-ddg-official-toggle').checked = newSettings.useDdgOfficial;
+        updateDdgOfficialState();
         
         renderOwn(); 
         renderLists();
@@ -677,34 +745,35 @@
   }
 
   function injectFloatingButton() {
-    if (location.pathname !== '/bangs') return;
-    if (document.getElementById('cb-floating-btn')) return;
+    if (location.hostname.includes('duckduckgo.com') && location.pathname === '/bangs') {
+      if (document.getElementById('cb-floating-btn')) return;
 
-    const btn = document.createElement('button');
-    btn.id = 'cb-floating-btn';
-    btn.textContent = '⚙️ Custom Bangs';
-    Object.assign(btn.style, {
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: '99999',
-      background: '#3574f0',
-      color: '#fff',
-      border: 'none',
-      borderRadius: '24px',
-      padding: '12px 20px',
-      fontSize: '14px',
-      fontWeight: 'bold',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-      cursor: 'pointer',
-      fontFamily: '-apple-system, system-ui, sans-serif'
-    });
+      const btn = document.createElement('button');
+      btn.id = 'cb-floating-btn';
+      btn.textContent = '⚙️ Custom Bangs';
+      Object.assign(btn.style, {
+        position: 'fixed',
+        bottom: '24px',
+        right: '24px',
+        zIndex: '99999',
+        background: '#3574f0',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '24px',
+        padding: '12px 20px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        cursor: 'pointer',
+        fontFamily: '-apple-system, system-ui, sans-serif'
+      });
 
-    btn.addEventListener('mouseenter', () => btn.style.background = '#4a84f4');
-    btn.addEventListener('mouseleave', () => btn.style.background = '#3574f0');
-    btn.addEventListener('click', openManager);
+      btn.addEventListener('mouseenter', () => btn.style.background = '#4a84f4');
+      btn.addEventListener('mouseleave', () => btn.style.background = '#3574f0');
+      btn.addEventListener('click', openManager);
 
-    document.body.appendChild(btn);
+      document.body.appendChild(btn);
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -728,7 +797,7 @@
       }
     }
 
-    if (getSettings().checkCollisions) {
+    if (getSettings().checkCollisions || (getSettings().enableOtherEngines && getSettings().useDdgOfficial)) {
       const cache = getDdgCache();
       if (!cache.lastFetched || Date.now() - new Date(cache.lastFetched).getTime() > syncIntervalMs) {
         fetchDdgOfficial({ silent: true }).catch(() => {});
