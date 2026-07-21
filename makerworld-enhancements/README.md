@@ -20,13 +20,13 @@
 https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhancements/makerworld-enhancements.user.js
 ```
 
-> Requires a userscript manager like [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
+> Requires a userscript manager like [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/) | [Read more about installation](../README.md#installation-guide)
 
 ---
 
 ## ✨ Features
 
-### 🔍 Cross-Platform Quick Search
+### Cross-Platform Quick Search
 
 Instantly search for similar models across multiple 3D printing platforms! Find alternatives and inspiration from:
 
@@ -34,7 +34,7 @@ Instantly search for similar models across multiple 3D printing platforms! Find 
 - **Thingiverse** - Browse MakerBot's vast library
 - More platforms coming soon!
 
-### 🔗 `Open in Bambu Studio` shortcut button
+### `Open in Bambu Studio` shortcut button
 
 Quickly import models directly into Bambu Studio with a convenient button on MakerWorld home pages.
 
@@ -46,7 +46,7 @@ Once installed, the enhancements activate automatically when you visit [MakerWor
 
 **Key Features:**
 
-- Look for a green star icon next to the exclusic model badge to open the menu
+- Look for a green star icon next to the exclusive model badge to open the menu
 - Enhanced UI elements integrate seamlessly with MakerWorld's interface
 - All features work automatically in the background
 
@@ -56,10 +56,10 @@ Once installed, the enhancements activate automatically when you visit [MakerWor
 
 Contributions are welcome! Check out the [GitHub repository](https://github.com/JMcrafter26/userscripts) to:
 
-- 🐞 Report bugs or issues
-- 💡 Suggest new features
-- 🔧 Submit pull requests
-- 📖 Improve documentation
+- Report bugs or issues
+- Suggest new features
+- Submit pull requests
+- Improve documentation
 
 ---
 

@@ -18,42 +18,42 @@
 https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/justlemmedebug.user.js
 ```
 
-> Requires a userscript manager like [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
+> Requires a userscript manager like [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/) | [Read more about installation](../README.md#installation-guide)
 
 ---
 
 ## ✨ Features
 
-### 🔓 Bypass Anti-Debug Protection
+### Bypass Anti-Debug Protection
 
 Allows developers to inspect and debug web pages without interference from anti-debugging techniques.
 
-### 🛡️ Block Common Anti-Debug Techniques
+### Block Common Anti-Debug Techniques
 
 - Neutralizes `disable-devtool` scripts
 - Strips debugger statements from inline scripts
 - Blocks infinite/tamper debugger traps
 - Prevents forced page reloads
 
-### 🧹 Clean Console Experience
+### Clean Console Experience
 
 - Prevents `console.clear()` from erasing your debug output
 - Filters console table spam and log pollution
 - Blocks repetitive date/time spam
 - Removes empty error messages
 
-### ⌨️ Restore Developer Controls
+### Restore Developer Controls
 
 - Removes keyboard shortcut restrictions (F12, Ctrl+Shift+I, etc.)
 - Restores right-click context menu
 - Bypasses copy/paste restrictions
 - Re-enables text selection
 
-### 🔍 iframe Support
+### iframe Support
 
 Preserves console access in iframes, ensuring you can debug embedded content.
 
-### 🌐 Universal Protection
+### Universal Protection
 
 Runs automatically on **all websites**, providing consistent debugging capabilities everywhere you browse.
 

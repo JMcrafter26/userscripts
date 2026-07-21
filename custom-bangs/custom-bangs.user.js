@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.2.0
-// @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones
+// @version      1.3.0
+// @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones (Mobile Friendly + Categories)
 // @author       Cufiy
 // @downloadURL  https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const OWN_KEY = 'customBangs';           // [{id, name, trigger, url, example}]
+  const OWN_KEY = 'customBangs';           // [{id, name, trigger, url, example, category}]
   const LISTS_KEY = 'externalLists';       // [{id, name, url, enabled, bangs:[{trigger,name,url}], lastSync}] — array order = priority
   const SETTINGS_KEY = 'cbSettings';       // {checkCollisions:true}
   const DDG_CACHE_KEY = 'ddgOfficialCache';// {bangs:[{trigger,name,url}], lastFetched}
@@ -187,22 +187,25 @@
   // ---------- UI ----------
   const STYLE = `
   .cb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999999;display:flex;
-    align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;font-family:-apple-system,system-ui,sans-serif;}
+    align-items:flex-start;justify-content:center;padding:16px;overflow:auto;font-family:-apple-system,system-ui,sans-serif;box-sizing:border-box;}
   .cb-modal{background:#181818;color:#eee;width:100%;max-width:780px;border-radius:12px;padding:24px;
-    box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative;}
+    box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative;box-sizing:border-box;}
   .cb-modal h2{margin:0 0 16px;font-size:20px;}
-  .cb-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;}
-  .cb-row input{flex:1;background:#111;border:1px solid #333;color:#eee;border-radius:8px;padding:8px 10px;font-size:14px;}
+  .cb-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
+  .cb-row input, .cb-row select{flex:1;background:#111;border:1px solid #333;color:#eee;border-radius:8px;padding:8px 10px;font-size:14px;box-sizing:border-box;}
   .cb-row input.cb-trigger{flex:0 0 90px;}
   .cb-list{max-height:260px;overflow:auto;margin-bottom:16px;border:1px solid #2a2a2a;border-radius:8px;}
-  .cb-item{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid #2a2a2a;}
+  .cb-item{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;}
   .cb-item:last-child{border-bottom:none;}
+  .cb-item-info{display:flex;flex:1;align-items:center;overflow:hidden;gap:8px;}
+  .cb-item-actions{display:flex;gap:6px;flex-shrink:0;}
   .cb-item .cb-trig{color:#7ab7ff;font-weight:600;width:70px;flex-shrink:0;}
-  .cb-item .cb-name{flex:1;color:#ccc;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-item .cb-name{flex:1;color:#ccc;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;}
   .cb-item .cb-url{flex:2;color:#888;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cb-cat-badge{background:#333;padding:3px 6px;border-radius:4px;font-size:11px;margin-right:6px;color:#bbb;white-space:nowrap;}
   .cb-warn{color:#e0b040;font-size:12px;cursor:help;}
-  .cb-btn{background:#2a2a2a;color:#eee;border:1px solid #3a3a3a;border-radius:8px;padding:6px 10px;
-    font-size:13px;cursor:pointer;}
+  .cb-btn{background:#2a2a2a;color:#eee;border:1px solid #3a3a3a;border-radius:8px;padding:8px 12px;
+    font-size:13px;cursor:pointer;white-space:nowrap;box-sizing:border-box;}
   .cb-btn:hover{background:#333;}
   .cb-btn.danger{color:#ff8080;}
   .cb-btn.primary{background:#3574f0;border-color:#3574f0;}
@@ -212,10 +215,10 @@
   .cb-section .cb-hint{color:#777;font-size:12px;margin-bottom:10px;}
   .cb-section textarea{width:100%;min-height:90px;background:#111;border:1px solid #333;color:#eee;
     border-radius:8px;padding:8px;font-family:monospace;font-size:12px;box-sizing:border-box;}
-  .cb-flex{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-  .cb-close{position:absolute;top:16px;right:20px;cursor:pointer;color:#888;font-size:20px;background:none;border:none;}
+  .cb-flex{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+  .cb-close{position:absolute;top:16px;right:20px;cursor:pointer;color:#888;font-size:24px;background:none;border:none;}
   .cb-small{color:#888;font-size:12px;margin-top:4px;}
-  .cb-listrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;}
+  .cb-listrow{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #2a2a2a;flex-wrap:wrap;}
   .cb-listrow:last-child{border-bottom:none;}
   .cb-listrow.disabled{opacity:.45;}
   .cb-listrow .cb-lname{flex:1;min-width:0;}
@@ -223,7 +226,26 @@
   .cb-listrow .cb-lname .cb-lmeta{font-size:11px;color:#888;}
   .cb-order-badge{width:22px;height:22px;border-radius:6px;background:#222;display:flex;align-items:center;
     justify-content:center;font-size:11px;color:#888;flex-shrink:0;}
-  .cb-toggle{width:16px;height:16px;flex-shrink:0;}
+  .cb-toggle{width:18px;height:18px;flex-shrink:0;}
+  
+  /* Mobile Responsiveness */
+  @media (max-width: 650px) {
+    .cb-modal { padding: 16px; }
+    .cb-row { flex-direction: column; align-items: stretch; }
+    .cb-row input.cb-trigger { flex: 1; }
+    .cb-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .cb-item-info { flex-direction: column; align-items: flex-start; width: 100%; gap: 6px; }
+    .cb-item .cb-url { width: 100%; white-space: normal; word-break: break-all; }
+    .cb-item-actions { width: 100%; justify-content: space-between; }
+    .cb-item-actions button { flex: 1; text-align: center; }
+    .cb-listrow { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .cb-listrow > div:first-child { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .cb-listrow .cb-lname { width: 100%; }
+    .cb-listrow .cb-btn { width: 100%; }
+    .cb-flex { flex-direction: column; align-items: stretch; }
+    .cb-flex button { width: 100%; }
+    .cb-flex .cb-small { text-align: center; }
+  }
   `;
 
   function injectStyle() {
@@ -254,9 +276,21 @@
         <div class="cb-section" style="margin-top:0;border-top:none;padding-top:0;">
           <h3>Your own bangs <span style="color:#666;">(always highest priority)</span></h3>
           <div class="cb-list" id="cb-own-list"></div>
+          
           <div class="cb-row">
             <input class="cb-trigger" id="cb-in-trigger" placeholder="!gh" />
             <input id="cb-in-name" placeholder="Site name, e.g. GitHub" />
+            <select id="cb-in-category">
+              <option value="">Choose category</option>
+              <option value="Tech">Tech</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Research">Research</option>
+              <option value="Online Services">Online Services</option>
+              <option value="News">News</option>
+              <option value="Multimedia">Multimedia</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Translation">Translation</option>
+            </select>
           </div>
           <div class="cb-row">
             <input id="cb-in-url" placeholder="https://github.com/search?q={{{s}}}" />
@@ -282,9 +316,9 @@
 
         <div class="cb-section">
           <h3>Collision detection</h3>
-          <div class="cb-row" style="margin-bottom:6px;">
-            <input type="checkbox" id="cb-collision-toggle" style="flex:0 0 auto;width:16px;height:16px;" />
-            <label for="cb-collision-toggle" style="font-size:13px;color:#ccc;">Warn when a bang collides with DuckDuckGo's official list</label>
+          <div class="cb-row" style="margin-bottom:6px; flex-direction: row; flex-wrap: nowrap;">
+            <input type="checkbox" id="cb-collision-toggle" style="flex:0 0 auto;width:18px;height:18px;" />
+            <label for="cb-collision-toggle" style="font-size:13px;color:#ccc;line-height:1.4;">Warn when a bang collides with DuckDuckGo's official list</label>
           </div>
           <div class="cb-flex">
             <button class="cb-btn" id="cb-ddg-refresh">Refresh official DDG bang cache</button>
@@ -341,15 +375,21 @@
         const warn = collision
           ? `<span class="cb-warn" title="Overrides official DDG bang !${escapeHtml(b.trigger)} → ${escapeHtml(collision.url)}">⚠</span>`
           : '';
+        const catBadge = b.category ? `<span class="cb-cat-badge">${escapeHtml(b.category)}</span>` : '';
+        
         return `
         <div class="cb-item" data-id="${b.id}">
-          <span class="cb-trig">!${escapeHtml(b.trigger)}</span>
-          <span class="cb-name">${escapeHtml(b.name)}</span>
-          <span class="cb-url">${escapeHtml(b.url)}</span>
-          ${warn}
-          <button class="cb-btn" data-action="test">Test</button>
-          <button class="cb-btn" data-action="edit">Edit</button>
-          <button class="cb-btn danger" data-action="delete">Delete</button>
+          <div class="cb-item-info">
+            <span class="cb-trig">!${escapeHtml(b.trigger)}</span>
+            <span class="cb-name">${catBadge}${escapeHtml(b.name)}</span>
+            <span class="cb-url">${escapeHtml(b.url)}</span>
+            ${warn}
+          </div>
+          <div class="cb-item-actions">
+            <button class="cb-btn" data-action="test">Test</button>
+            <button class="cb-btn" data-action="edit">Edit</button>
+            <button class="cb-btn danger" data-action="delete">Delete</button>
+          </div>
         </div>`;
       }).join('');
     }
@@ -373,6 +413,7 @@
         editBangId = bang.id;
         overlay.querySelector('#cb-in-trigger').value = bang.trigger;
         overlay.querySelector('#cb-in-name').value = bang.name || '';
+        overlay.querySelector('#cb-in-category').value = bang.category || '';
         overlay.querySelector('#cb-in-url').value = bang.url || '';
         overlay.querySelector('#cb-in-example').value = bang.example || '';
         overlay.querySelector('#cb-add').textContent = 'Save Edit';
@@ -384,6 +425,7 @@
       editBangId = null;
       overlay.querySelector('#cb-in-trigger').value = '';
       overlay.querySelector('#cb-in-name').value = '';
+      overlay.querySelector('#cb-in-category').value = '';
       overlay.querySelector('#cb-in-url').value = '';
       overlay.querySelector('#cb-in-example').value = '';
       overlay.querySelector('#cb-add').textContent = 'Add';
@@ -393,6 +435,7 @@
     overlay.querySelector('#cb-add').addEventListener('click', () => {
       const trigger = overlay.querySelector('#cb-in-trigger').value.trim().replace(/^!/, '');
       const name = overlay.querySelector('#cb-in-name').value.trim();
+      const category = overlay.querySelector('#cb-in-category').value;
       const url = overlay.querySelector('#cb-in-url').value.trim();
       const example = overlay.querySelector('#cb-in-example').value.trim();
       
@@ -410,20 +453,21 @@
             alert('Another custom bang with this trigger already exists!');
             return;
           }
-          list[idx] = { id: editBangId, name, trigger, url, example };
+          list[idx] = { id: editBangId, name, trigger, url, example, category };
         }
         editBangId = null;
         overlay.querySelector('#cb-add').textContent = 'Add';
         overlay.querySelector('#cb-cancel-edit').style.display = 'none';
       } else {
         const existingIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase());
-        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, url, example };
+        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, url, example, category };
         if (existingIdx >= 0) list[existingIdx] = entry; else list.push(entry);
       }
 
       saveOwn(list);
       overlay.querySelector('#cb-in-trigger').value = '';
       overlay.querySelector('#cb-in-name').value = '';
+      overlay.querySelector('#cb-in-category').value = '';
       overlay.querySelector('#cb-in-url').value = '';
       overlay.querySelector('#cb-in-example').value = '';
       renderOwn(); renderLists();
@@ -448,7 +492,7 @@
         if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
         const normalized = parsed.map(b => ({
           id: b.id || uid(), name: b.name || '', trigger: (b.trigger || '').replace(/^!/, ''),
-          url: b.url || '', example: b.example || ''
+          url: b.url || '', example: b.example || '', category: b.category || ''
         }));
         if (!confirm(`Replace your ${getOwn().length} current bangs with ${normalized.length} imported bangs?`)) return;
         saveOwn(normalized);
@@ -471,8 +515,10 @@
           : '';
         return `
         <div class="cb-listrow ${l.enabled ? '' : 'disabled'}" data-id="${l.id}">
-          <span class="cb-order-badge">${i + 1}</span>
-          <input type="checkbox" class="cb-toggle" data-action="toggle" ${l.enabled ? 'checked' : ''} title="Enabled" />
+          <div>
+            <span class="cb-order-badge">${i + 1}</span>
+            <input type="checkbox" class="cb-toggle" data-action="toggle" ${l.enabled ? 'checked' : ''} title="Enabled" />
+          </div>
           <div class="cb-lname">
             <div class="cb-ltitle">${escapeHtml(l.name)}</div>
             <div class="cb-lmeta">${stats.total} bangs · ${stats.shadowed} shadowed by higher priority${collisionText}${l.lastSync ? ' · synced ' + new Date(l.lastSync).toLocaleString() : ' · never synced'}</div>

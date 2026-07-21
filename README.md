@@ -10,6 +10,7 @@ This is my personal collection of userscripts designed to enhance web browsing a
 - [Userscripts](#userscripts)
   - [Table of Contents](#table-of-contents)
   - [Available Userscripts](#available-userscripts)
+    - [Custom DuckDuckGo !Bangs](#custom-duckduckgo-bangs)
     - [JustLemmeDebug](#justlemmedebug)
     - [Makerworld Enhancements](#makerworld-enhancements)
   - [Installation Guide](#installation-guide)
@@ -34,6 +35,17 @@ This is my personal collection of userscripts designed to enhance web browsing a
 > [!TIP]
 > Click the badges to install or view the source code.
 
+### [Custom DuckDuckGo !Bangs](./custom-bangs/README.md)
+
+[![Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/562679-custom-duckduckgo-bangs)
+[![GitHub](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/github/cozy.svg)](https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js)
+
+```url
+https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
+```
+
+
+
 ### [JustLemmeDebug](./justlemmedebug/README.md)
 
 [![Greasyfork](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/greasy-fork/cozy.svg)](https://greasyfork.org/en/scripts/562680-justlemmedebug/)
@@ -46,12 +58,12 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/justlemmedebug/ju
 **Unblock developer tools and debugging capabilities!** Blocks anti-debugging scripts on websites to allow easier debugging. Based on the concept from [LemmeDebug](https://github.com/deeeeone/userscripts).
 
 - **Features:**
-  - 🔓 **Bypass Anti-Debug Protection** - Allows developers to inspect and debug web pages without interference
-  - 🛡️ **Block Common Techniques** - Neutralizes disable-devtool, debugger statements, and infinite/tamper debugger traps
-  - 🧹 **Clean Console** - Prevents console.clear(), table spam, and log pollution
-  - ⌨️ **Restore Controls** - Removes keyboard and right-click restrictions
-  - 🔍 **iframe Support** - Preserves console access in iframes
-  - 🌐 **Universal** - Runs automatically on all websites
+  - **Bypass Anti-Debug Protection** - Allows developers to inspect and debug web pages without interference
+  - **Block Common Techniques** - Neutralizes disable-devtool, debugger statements, and infinite/tamper debugger traps
+  - **Clean Console** - Prevents console.clear(), table spam, and log pollution
+  - **Restore Controls** - Removes keyboard and right-click restrictions
+  - **iframe Support** - Preserves console access in iframes
+  - **Universal** - Runs automatically on all websites
 
 - **Original Author**: Cufiy + deeeeone
 - [**More Details ➜**](./justlemmedebug/README.md)
@@ -68,9 +80,9 @@ https://raw.githubusercontent.com/JMcrafter26/userscripts/main/makerworld-enhanc
 **Supercharge your MakerWorld experience!** This userscript adds powerful enhancements and quality-of-life improvements to the MakerWorld platform.
 
 - **Features:**
-  - 🔍 **Cross-Platform Quick Search** - Instantly find similar models on Printables and Thingiverse
-  - 🚀 **Enhanced UI** - Seamless integration with MakerWorld's interface
-  - 🎨 **More Coming Soon** - Regular updates with new features based on community feedback!
+  - **Cross-Platform Quick Search** - Instantly find similar models on Printables and Thingiverse
+  - **Enhanced UI** - Seamless integration with MakerWorld's interface
+  - **More Coming Soon** - Regular updates with new features based on community feedback!
 - **Author**: Cufiy
 - **License**: AGPL-3.0
 - [**More Details ➜**](./makerworld-enhancements/README.md)
@@ -83,11 +95,12 @@ You'll need a userscript manager installed in your browser:
 
 | Platform | Browser | Recommended Extension |
 | ---------- | --------- | ---------------------- |
-| 🖥️ **Desktop** | Chrome, Edge, Brave | [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/) or [Greasemonkey](https://www.greasespot.net/) |
-| 🖥️ **Desktop** | Firefox | [Tampermonkey](https://www.tampermonkey.net/) or [Greasemonkey](https://www.greasespot.net/) or [Violentmonkey](https://violentmonkey.github.io/) |
-| 🖥️ **Desktop** | Safari | [Tampermonkey](https://www.tampermonkey.net/) or [Userscripts](https://apps.apple.com/app/userscripts/id1463298887) |
-| 📱 **Mobile** | iOS Safari | [Userscripts App](https://apps.apple.com/us/app/userscripts/id1463298887) |
-| 📱 **Mobile** | Android Firefox | [Tampermonkey](https://www.tampermonkey.net/) (via Firefox Add-ons) |
+| 🖥️ **Desktop** | Almost All | [Violentmonkey](https://violentmonkey.github.io/) |
+| 🖥️ **Desktop** | Almost All | [ScriptCat](https://docs.scriptcat.org/en/) |
+| 🖥️ **Desktop** | FireFox | [FireMonkey](https://addons.mozilla.org/en-US/firefox/addon/firemonkey/) |
+| 📱 **Android** | FireFox | [Violentmonkey](https://violentmonkey.github.io/) |
+| 📱 **iOS/Mac** | Safari | [wBlock](https://apps.apple.com/us/app/wblock/id6746388723) |
+| 📱 **iOS/Mac** | Safari | [Userscripts](https://apps.apple.com/us/app/userscripts/id1463298887) |
 
 ### Installation Methods
 
@@ -107,6 +120,14 @@ You'll need a userscript manager installed in your browser:
 2. Open your userscript manager's dashboard
 3. Look for "Install from URL" or "New script from URL"
 4. Paste the URL and confirm the installation
+
+**For iOS (wBlock App):**
+
+1. Copy the userscript URL from above
+2. Open the wBlock app
+3. Navigate to the **"Scripts"** tab
+4. Tap the **"+"** button to add a new script
+5. Paste the URL and confirm the installation
 
 **For iOS (Userscripts App):**
 
