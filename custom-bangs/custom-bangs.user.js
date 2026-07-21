@@ -318,13 +318,23 @@
   .cb-listrow.disabled{opacity:.45;}
   .cb-listrow .cb-lname{flex:1;min-width:0;}
   .cb-listrow .cb-lname .cb-ltitle{font-size:14px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cb-copy-url:hover { text-decoration: underline; color: #fff; }
   .cb-listrow .cb-lname .cb-lmeta{font-size:11px;color:#888;}
   .cb-order-badge{width:22px;height:22px;border-radius:6px;background:#222;display:flex;align-items:center;
     justify-content:center;font-size:11px;color:#888;flex-shrink:0;}
   .cb-toggle{width:18px;height:18px;flex-shrink:0;}
+
+  @media (min-width: 651px) {
+  #cb-in-trigger { flex: 0 0 160px; }
+  #cb-in-name { flex: 0 0 200px; }
+  #cb-in-group { flex: 0 0 100px; }
+    #cb-in-category { max-width: 160px; flex: 0 0 160px; }
+  }
   
   @media (max-width: 650px) {
+  .cb-overlay { padding: 0px; }
     .cb-modal { padding: 16px; }
+    .cb-list { max-height: 420px; }
     .cb-row { flex-direction: column; align-items: stretch; }
     .cb-row input.cb-trigger { flex: 1; }
     .cb-item { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -336,6 +346,7 @@
     .cb-listrow > div:first-child { display: flex; align-items: center; gap: 8px; width: 100%; }
     .cb-listrow .cb-lname { width: 100%; }
     .cb-listrow .cb-btn { width: 100%; }
+    .cb-listrow-move { width: 100%; }
     .cb-flex { flex-direction: column; align-items: stretch; }
     .cb-flex button { width: 100%; }
     .cb-flex .cb-small { text-align: center; }
@@ -373,22 +384,121 @@
         <div class="cb-section" style="margin-top:0;border-top:none;padding-top:0;">
           <h3>Your own bangs <span style="color:#666;">(always highest priority)</span></h3>
           <div class="cb-list" id="cb-own-list" style="border:none;"></div>
-          
           <div class="cb-row">
             <input class="cb-trigger" id="cb-in-trigger" placeholder="!gh, !gith" title="Main bang, and optionally comma separated aliases" />
             <input id="cb-in-name" placeholder="Site name, e.g. GitHub" />
-            <input id="cb-in-group" placeholder="Group (e.g. Sync Gist)" title="Organize bangs for grouped exporting" style="flex:0 0 130px;" />
-            <select id="cb-in-category" style="flex:0 0 120px;">
-              <option value="">Category</option>
-              <option value="Tech">Tech</option>
-              <option value="Shopping">Shopping</option>
-              <option value="Research">Research</option>
-              <option value="Online Services">Online Services</option>
-              <option value="News">News</option>
-              <option value="Multimedia">Multimedia</option>
-              <option value="Entertainment">Entertainment</option>
-              <option value="Translation">Translation</option>
-            </select>
+              <input id="cb-in-group" placeholder="Group (e.g. Sync Gist)" title="Organize bangs for grouped exporting" />
+              <select id="cb-in-category">
+                <option value="">Category</option>
+
+                <option value="Tech:Blogs">Tech: Blogs</option>
+                <option value="Tech:Blogs (intl)">Tech: Blogs (intl)</option>
+                <option value="Tech:Chakra">Tech: Chakra</option>
+                <option value="Tech:Cryptocurrency">Tech: Cryptocurrency</option>
+                <option value="Tech:Companies">Tech: Companies</option>
+                <option value="Tech:Design">Tech: Design</option>
+                <option value="Tech:Domains">Tech: Domains</option>
+                <option value="Tech:Downloads">Tech: Downloads</option>
+                <option value="Tech:Downloads (add-ons)">Tech: Downloads (add-ons)</option>
+                <option value="Tech:Downloads (apps)">Tech: Downloads (apps)</option>
+                <option value="Tech:Downloads (code)">Tech: Downloads (code)</option>
+                <option value="Tech:Downloads (intl)">Tech: Downloads (intl)</option>
+                <option value="Tech:Downloads (software)">Tech: Downloads (software)</option>
+                <option value="Tech:Programming">Tech: Programming</option>
+                <option value="Tech:Startups">Tech: Startups</option>
+                <option value="Tech:Sysadmin">Tech: Sysadmin</option>
+
+                <option value="Shopping:Big box/department">Shopping: Big box/department</option>
+                <option value="Shopping:Online">Shopping: Online</option>
+                <option value="Shopping:Online (deals)">Shopping: Online (deals)</option>
+                <option value="Shopping:Online (intl)">Shopping: Online (intl)</option>
+                <option value="Shopping:Online (marketplace)">Shopping: Online (marketplace)</option>
+                <option value="Shopping:Services">Shopping: Services</option>
+                <option value="Shopping:Tech">Shopping: Tech</option>
+                <option value="Shopping:Tech (domains)">Shopping: Tech (domains)</option>
+
+                <option value="Research:Academic">Research: Academic</option>
+                <option value="Research:Academic (math/cs)">Research: Academic (math/cs)</option>
+                <option value="Research:Academic (biology)">Research: Academic (biology)</option>
+                <option value="Research:Food">Research: Food</option>
+                <option value="Research:Government">Research: Government</option>
+                <option value="Research:Health">Research: Health</option>
+                <option value="Research:Law">Research: Law</option>
+                <option value="Research:Learning">Research: Learning</option>
+                <option value="Research:Learning (intl)">Research: Learning (intl)</option>
+                <option value="Research:Local">Research: Local</option>
+                <option value="Research:Real Estate">Research: Real Estate</option>
+                <option value="Research:Reference">Research: Reference</option>
+                <option value="Research:Reference (fun)">Research: Reference (fun)</option>
+                <option value="Research:Reference (religion)">Research: Reference (religion)</option>
+                <option value="Research:Reference (science)">Research: Reference (science)</option>
+                <option value="Research:Reference (words intl)">Research: Reference (words intl)</option>
+                <option value="Research:Reference (words)">Research: Reference (words)</option>
+                <option value="Research:Topical">Research: Topical</option>
+                <option value="Research:Travel">Research: Travel</option>
+
+                <option value="Online Services:Events">Online Services: Events</option>
+                <option value="Online Services:Google">Online Services: Google</option>
+                <option value="Online Services:Jobs">Online Services: Jobs</option>
+                <option value="Online Services:Maps">Online Services: Maps</option>
+                <option value="Online Services:Search">Online Services: Search</option>
+                <option value="Online Services:Search (DDG)">Online Services: Search (DDG)</option>
+                <option value="Online Services:Search (non-US)">Online Services: Search (non-US)</option>
+                <option value="Online Services:Search (Private)">Online Services: Search (Private)</option>
+                <option value="Online Services:Search (Real-time)">Online Services: Search (Real-time)</option>
+                <option value="Online Services:Social">Online Services: Social</option>
+                <option value="Online Services:Social (intl)">Online Services: Social (intl)</option>
+                <option value="Online Services:Social news/links">Online Services: Social news/links</option>
+                <option value="Online Services:Tools">Online Services: Tools</option>
+                <option value="Online Services:Tools (fundraising)">Online Services: Tools (fundraising)</option>
+                <option value="Online Services:Tools (URLs)">Online Services: Tools (URLs)</option>
+                <option value="Online Services:Tracking">Online Services: Tracking</option>
+
+                <option value="News:Aggregators">News: Aggregators</option>
+                <option value="News:Broadcast">News: Broadcast</option>
+                <option value="News:Business">News: Business</option>
+                <option value="News:International">News: International</option>
+                <option value="News:Magazine">News: Magazine</option>
+                <option value="News:Magazine (car)">News: Magazine (car)</option>
+                <option value="News:Magazine (fashion)">News: Magazine (fashion)</option>
+                <option value="News:Newspaper">News: Newspaper</option>
+                <option value="News:Newspaper (intl)">News: Newspaper (intl)</option>
+                <option value="News:Online">News: Online</option>
+                <option value="News:Specialty">News: Specialty</option>
+                <option value="News:Weather">News: Weather</option>
+
+                <option value="Multimedia:Books">Multimedia: Books</option>
+                <option value="Multimedia:Docs">Multimedia: Docs</option>
+                <option value="Multimedia:General">Multimedia: General</option>
+                <option value="Multimedia:Images">Multimedia: Images</option>
+                <option value="Multimedia:Music">Multimedia: Music</option>
+                <option value="Multimedia:Music (Folk)">Multimedia: Music (Folk)</option>
+                <option value="Multimedia:Music (Lyrics)">Multimedia: Music (Lyrics)</option>
+                <option value="Multimedia:Video">Multimedia: Video</option>
+
+                <option value="Entertainment:Audio">Entertainment: Audio</option>
+                <option value="Entertainment:Blogs">Entertainment: Blogs</option>
+                <option value="Entertainment:Blogs (intl)">Entertainment: Blogs (intl)</option>
+                <option value="Entertainment:Comics">Entertainment: Comics</option>
+                <option value="Entertainment:Events">Entertainment: Events</option>
+                <option value="Entertainment:Forum">Entertainment: Forum</option>
+                <option value="Entertainment:Games (general)">Entertainment: Games (general)</option>
+                <option value="Entertainment:Games (Minecraft)">Entertainment: Games (Minecraft)</option>
+                <option value="Entertainment:Games (offline)">Entertainment: Games (offline)</option>
+                <option value="Entertainment:Games (Pokemon)">Entertainment: Games (Pokemon)</option>
+                <option value="Entertainment:Games (specific)">Entertainment: Games (specific)</option>
+                <option value="Entertainment:Games (WOW)">Entertainment: Games (WOW)</option>
+                <option value="Entertainment:Misc">Entertainment: Misc</option>
+                <option value="Entertainment:Movies">Entertainment: Movies</option>
+                <option value="Entertainment:Radio">Entertainment: Radio</option>
+                <option value="Entertainment:Sports">Entertainment: Sports</option>
+                <option value="Entertainment:TV">Entertainment: TV</option>
+
+                <option value="Translation:Google">Translation: Google</option>
+                <option value="Translation:Google Translate">Translation: Google Translate</option>
+                <option value="Translation:Microsoft">Translation: Microsoft</option>
+                
+              </select>
           </div>
           <div class="cb-row">
             <input id="cb-in-url" placeholder="https://github.com/search?q={{{s}}}" title="Paste a search URL here and we'll automatically replace the query with {{{s}}}!" />
@@ -598,7 +708,7 @@
         const itemsHtml = items.map(b => {
           const colls = ownCollisions(b);
           const warn = colls.length
-            ? `<span class="cb-warn" title="Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}">⚠</span>`
+            ? `<span class="cb-warn" title="Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}" onclick="alert('Overrides official DDG bang(s): ${colls.map(c => '!'+escapeHtml(c)).join(', ')}')">⚠</span>`
             : '';
           const catBadge = b.category ? `<span class="cb-cat-badge">${escapeHtml(b.category)}</span>` : '';
           
@@ -868,19 +978,36 @@
             <input type="checkbox" class="cb-toggle" data-action="toggle" ${l.enabled ? 'checked' : ''} title="Enabled" />
           </div>
           <div class="cb-lname">
-            <div class="cb-ltitle">${escapeHtml(l.name)}</div>
+            <div class="cb-ltitle cb-copy-url" style="cursor:pointer;" title="Click to copy URL" data-url="${escapeHtml(l.url)}">${escapeHtml(l.name)}</div>
             <div class="cb-lmeta">${stats.total} bangs · ${stats.shadowed} shadowed by higher priority${collisionText}${l.lastSync ? ' · synced ' + new Date(l.lastSync).toLocaleString() : ' · never synced'}</div>
           </div>
-          <button class="cb-btn" data-action="up" ${i === 0 ? 'disabled' : ''}>↑</button>
-          <button class="cb-btn" data-action="down" ${i === lists.length - 1 ? 'disabled' : ''}>↓</button>
-          <button class="cb-btn" data-action="sync">Sync</button>
-          <button class="cb-btn" data-action="export">Export</button>
+          <div class="cb-listrow-move" style="display:flex; gap:8px;">
+            <button class="cb-btn" style="flex:1;" data-action="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button class="cb-btn" style="flex:1;" data-action="down" ${i === lists.length - 1 ? 'disabled' : ''}>↓</button>
+          </div>
+          <div class="cb-listrow-move" style="display:flex; gap:8px;">
+            <button class="cb-btn" data-action="sync">Sync</button>
+            <button class="cb-btn" data-action="export">Export</button>
+          </div>
           <button class="cb-btn danger" data-action="remove">Remove</button>
         </div>`;
       }).join('');
     }
 
     listsEl.addEventListener('click', (e) => {
+      const copyTitle = e.target.closest('.cb-copy-url');
+      if (copyTitle) {
+        const urlToCopy = copyTitle.dataset.url;
+        if (urlToCopy) {
+          navigator.clipboard.writeText(urlToCopy).then(() => {
+            const origText = copyTitle.textContent;
+            copyTitle.textContent = 'Copied!';
+            setTimeout(() => { copyTitle.textContent = origText; }, 1000);
+          }).catch(err => console.error('Failed to copy', err));
+        }
+        return;
+      }
+
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const row = e.target.closest('.cb-listrow');

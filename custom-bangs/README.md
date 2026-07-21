@@ -51,6 +51,8 @@ The entire management interface is responsive, ensuring you can easily add, edit
 
 Easily export your *entire* configuration (own bangs, external lists, and settings) to a JSON format so you can instantly transfer your exact setup to another browser or device.
 
+![Screenshot](https://i.ibb.co/gbSrmQnm/Screenshot-2026-07-22-at-00-16-12-Duck-Duck-Go-Bangs.png)
+
 ---
 
 ## 💡 Usage
