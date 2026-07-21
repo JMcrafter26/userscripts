@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Custom DuckDuckGo Bangs (Group & Export Enhanced)
+// @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.8.0
+// @version      1.8.1
 // @description  Add your own !bangs to DuckDuckGo (and other search engines) without touching built-in ones
 // @author       Cufiy
 // @license      AGPL-3.0
