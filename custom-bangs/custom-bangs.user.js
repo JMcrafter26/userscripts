@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.4.0
+// @version      1.5.0
 // @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones (Mobile Friendly + Categories + URL Extract)
 // @author       Cufiy
+// @license      AGPL-3.0
+// @copyright    Copyright (C) 2026, Cufiy
 // @downloadURL  https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @match        https://duckduckgo.com/*
@@ -25,7 +27,7 @@
 
   const OWN_KEY = 'customBangs';           // [{id, name, trigger, url, example, category}]
   const LISTS_KEY = 'externalLists';       // [{id, name, url, enabled, bangs:[{trigger,name,url}], lastSync}] — array order = priority
-  const SETTINGS_KEY = 'cbSettings';       // {checkCollisions:true}
+  const SETTINGS_KEY = 'cbSettings';       // {checkCollisions:true, syncInterval:24}
   const DDG_CACHE_KEY = 'ddgOfficialCache';// {bangs:[{trigger,name,url}], lastFetched}
 
   // ---------- Storage helpers ----------
@@ -36,8 +38,8 @@
   function saveLists(list) { GM_setValue(LISTS_KEY, JSON.stringify(list)); }
 
   function getSettings() {
-    try { return Object.assign({ checkCollisions: true }, JSON.parse(GM_getValue(SETTINGS_KEY, '{}'))); }
-    catch (e) { return { checkCollisions: true }; }
+    try { return Object.assign({ checkCollisions: true, syncInterval: 24 }, JSON.parse(GM_getValue(SETTINGS_KEY, '{}'))); }
+    catch (e) { return { checkCollisions: true, syncInterval: 24 }; }
   }
   function saveSettings(s) { GM_setValue(SETTINGS_KEY, JSON.stringify(s)); }
 
@@ -49,13 +51,12 @@
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-  // ---------- Shared parser: handles both DDG's bang.js format and our own {trigger,name,url} ----------
+  // ---------- Shared parser ----------
   function normalizeRemoteBangs(rawText) {
     const data = JSON.parse(rawText);
     if (!Array.isArray(data)) throw new Error('Expected a JSON array');
     return data.map(item => {
       if (item.t !== undefined && item.u !== undefined) {
-        // DDG bang.js format: t=trigger, u=url, s=site name
         return { trigger: String(item.t).replace(/^!/, '').toLowerCase(), name: item.s || item.t, url: item.u };
       }
       if (item.trigger !== undefined && item.url !== undefined) {
@@ -65,10 +66,9 @@
     }).filter(Boolean);
   }
 
-  // ---------- Matching & redirect (runs first, before any UI code) ----------
+  // ---------- Matching & redirect ----------
   function findMatch(trigger) {
     const t = trigger.toLowerCase();
-
     const own = getOwn().find(b => b.trigger.toLowerCase() === t);
     if (own) return { source: 'own', bang: own };
 
@@ -94,9 +94,8 @@
     const match = q.match(/(^|\s)!(\S+)/);
     if (!match) return false;
 
-    const trigger = match[2];
-    const hit = findMatch(trigger);
-    if (!hit) return false; // not ours -> let DDG handle its own bangs untouched
+    const hit = findMatch(match[2]);
+    if (!hit) return false; 
 
     const rest = q.replace(match[0], ' ').trim().replace(/\s+/g, ' ');
     location.replace(buildTarget(hit.bang.url, rest));
@@ -105,7 +104,7 @@
 
   if (tryRedirect()) return;
 
-  // ---------- Remote sync: one custom list ----------
+  // ---------- Remote sync ----------
   function syncList(id, { silent = false } = {}) {
     return new Promise((resolve, reject) => {
       const lists = getLists();
@@ -189,7 +188,7 @@
   .cb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999999;display:flex;
     align-items:flex-start;justify-content:center;padding:16px;overflow:auto;font-family:-apple-system,system-ui,sans-serif;box-sizing:border-box;}
   .cb-modal{background:#181818;color:#eee;width:100%;max-width:780px;border-radius:12px;padding:24px;
-    box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative;box-sizing:border-box;}
+    box-shadow:0 10px 40px rgba(0,0,0,.5);position:relative;box-sizing:border-box;margin-bottom:40px;}
   .cb-modal h2{margin:0 0 16px;font-size:20px;}
   .cb-row{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;}
   .cb-row input, .cb-row select{flex:1;background:#111;border:1px solid #333;color:#eee;border-radius:8px;padding:8px 10px;font-size:14px;box-sizing:border-box;}
@@ -213,7 +212,7 @@
   .cb-section{margin-top:20px;padding-top:16px;border-top:1px solid #2a2a2a;}
   .cb-section h3{margin:0 0 4px;font-size:14px;color:#aaa;text-transform:uppercase;letter-spacing:.05em;}
   .cb-section .cb-hint{color:#777;font-size:12px;margin-bottom:10px;}
-  .cb-section textarea{width:100%;min-height:90px;background:#111;border:1px solid #333;color:#eee;
+  .cb-section textarea{width:100%;min-height:120px;background:#111;border:1px solid #333;color:#eee;
     border-radius:8px;padding:8px;font-family:monospace;font-size:12px;box-sizing:border-box;}
   .cb-flex{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;}
   .cb-close{position:absolute;top:16px;right:20px;cursor:pointer;color:#888;font-size:24px;background:none;border:none;}
@@ -315,10 +314,19 @@
         </div>
 
         <div class="cb-section">
-          <h3>Collision detection</h3>
-          <div class="cb-row" style="margin-bottom:6px; flex-direction: row; flex-wrap: nowrap;">
+          <h3>Settings & Sync</h3>
+          <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center;">
             <input type="checkbox" id="cb-collision-toggle" style="flex:0 0 auto;width:18px;height:18px;" />
-            <label for="cb-collision-toggle" style="font-size:13px;color:#ccc;line-height:1.4;">Warn when a bang collides with DuckDuckGo's official list</label>
+            <label for="cb-collision-toggle" style="font-size:13px;color:#ccc;line-height:1.4;cursor:pointer;">Warn when a bang collides with DuckDuckGo's official list</label>
+          </div>
+          <div class="cb-row" style="margin-bottom:12px; flex-direction: row; flex-wrap: nowrap; align-items: center; max-width: 350px;">
+            <label for="cb-sync-interval" style="font-size:13px;color:#ccc;white-space:nowrap;">Auto-sync interval:</label>
+            <select id="cb-sync-interval" style="margin-left: 10px;">
+              <option value="0">Never (Manual only)</option>
+              <option value="12">Every 12 Hours</option>
+              <option value="24">Daily</option>
+              <option value="168">Weekly</option>
+            </select>
           </div>
           <div class="cb-flex">
             <button class="cb-btn" id="cb-ddg-refresh">Refresh official DDG bang cache</button>
@@ -327,11 +335,12 @@
         </div>
 
         <div class="cb-section">
-          <h3>Import / Export (your own bangs)</h3>
-          <textarea id="cb-json" placeholder="[]"></textarea>
+          <h3>Backup & Restore (Everything)</h3>
+          <div class="cb-hint">Export or import your entire configuration (own bangs, external lists, and settings) to easily copy it to another browser.</div>
+          <textarea id="cb-json" placeholder='{"own": [], "lists": [], "settings": {}}'></textarea>
           <div class="cb-flex">
-            <button class="cb-btn" id="cb-export">Export current list</button>
-            <button class="cb-btn" id="cb-import">Import (replace list)</button>
+            <button class="cb-btn" id="cb-export-all">Export Everything</button>
+            <button class="cb-btn danger" id="cb-import-all">Import Everything (Overwrites!)</button>
           </div>
         </div>
       </div>
@@ -342,17 +351,26 @@
     const listsEl = overlay.querySelector('#cb-lists');
     const ddgStatusEl = overlay.querySelector('#cb-ddg-status');
     const collisionToggle = overlay.querySelector('#cb-collision-toggle');
+    const syncIntervalSel = overlay.querySelector('#cb-sync-interval');
     const urlInput = overlay.querySelector('#cb-in-url');
 
-    collisionToggle.checked = getSettings().checkCollisions;
+    // Init settings
+    const settings = getSettings();
+    collisionToggle.checked = settings.checkCollisions;
+    syncIntervalSel.value = settings.syncInterval;
+
     collisionToggle.addEventListener('change', () => {
       saveSettings(Object.assign(getSettings(), { checkCollisions: collisionToggle.checked }));
       renderOwn(); renderLists();
     });
 
+    syncIntervalSel.addEventListener('change', () => {
+      saveSettings(Object.assign(getSettings(), { syncInterval: parseInt(syncIntervalSel.value, 10) }));
+    });
+
     // Auto-extract URL query parameter on paste
     urlInput.addEventListener('paste', (e) => {
-      if (urlInput.value.trim() !== '') return; // Only process if input was previously empty
+      if (urlInput.value.trim() !== '') return; 
       
       const pastedText = (e.clipboardData || window.clipboardData).getData('text');
       if (!pastedText || pastedText.includes('{{{s}}}')) return;
@@ -372,19 +390,17 @@
 
         // If no known query parameter was found but the url contains /search/something pattern, we can also replace that
         if (!modified) {
-            const searchPathMatch = urlObj.pathname.match(/\/search\/([^\/]+)/);
-            if (searchPathMatch) {
-                urlObj.pathname = urlObj.pathname.replace(searchPathMatch[1], '{{{s}}}');
-                modified = true;
-            }
+          const searchPathMatch = urlObj.pathname.match(/\/search\/([^\/]+)/);
+          if (searchPathMatch) {
+            urlObj.pathname = urlObj.pathname.replace(searchPathMatch[1], '{{{s}}}');
+            modified = true;
+          }
         }
 
         if (modified) {
-          e.preventDefault(); // Prevent standard pasting
-          // Convert URL object back to string, and unencode the curly brackets
+          e.preventDefault(); 
           urlInput.value = urlObj.toString().replace(/(?:%7B){3}s(?:%7D){3}/gi, '{{{s}}}');
         }
-
       } catch (err) {
         // Not a valid URL, ignore and let standard paste happen
       }
@@ -444,7 +460,7 @@
       const bang = own.find(b => b.id === id);
 
       if (btn.dataset.action === 'delete') {
-        if (editBangId === id) overlay.querySelector('#cb-cancel-edit').click(); // Abort edit if open
+        if (editBangId === id) overlay.querySelector('#cb-cancel-edit').click();
         saveOwn(own.filter(b => b.id !== id));
         renderOwn(); renderLists();
       } else if (btn.dataset.action === 'test') {
@@ -488,7 +504,6 @@
       if (editBangId) {
         const idx = list.findIndex(b => b.id === editBangId);
         if (idx >= 0) {
-          // Check collision if user modified the trigger during the edit
           const conflictIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase() && b.id !== editBangId);
           if (conflictIdx >= 0) {
             alert('Another custom bang with this trigger already exists!');
@@ -521,24 +536,49 @@
       window.open(buildTarget(url, example), '_blank');
     });
 
-    overlay.querySelector('#cb-export').addEventListener('click', () => {
-      overlay.querySelector('#cb-json').value = JSON.stringify(getOwn(), null, 2);
+    // ---- Global Import/Export ----
+    overlay.querySelector('#cb-export-all').addEventListener('click', () => {
+      const payload = {
+        own: getOwn(),
+        lists: getLists(),
+        settings: getSettings()
+      };
+      overlay.querySelector('#cb-json').value = JSON.stringify(payload, null, 2);
     });
 
-    overlay.querySelector('#cb-import').addEventListener('click', () => {
+    overlay.querySelector('#cb-import-all').addEventListener('click', () => {
       const raw = overlay.querySelector('#cb-json').value.trim();
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
-        const normalized = parsed.map(b => ({
-          id: b.id || uid(), name: b.name || '', trigger: (b.trigger || '').replace(/^!/, ''),
-          url: b.url || '', example: b.example || '', category: b.category || ''
-        }));
-        if (!confirm(`Replace your ${getOwn().length} current bangs with ${normalized.length} imported bangs?`)) return;
-        saveOwn(normalized);
-        renderOwn(); renderLists();
-      } catch (e) { alert('Invalid JSON: ' + e.message); }
+        
+        // Validation check for general format (if it's an array, user might be trying to import old v1 format)
+        if (Array.isArray(parsed)) {
+          throw new Error('This looks like a list of bangs (v1 export). Please wrap it in {"own": [...]} or re-export from the new version.');
+        }
+        
+        if (!parsed.own || !parsed.lists) {
+          throw new Error('Invalid format. Expected "own" and "lists" arrays.');
+        }
+
+        if (!confirm(`This will OVERWRITE your entire Custom Bangs configuration (including external lists and settings). Continue?`)) return;
+        
+        saveOwn(parsed.own);
+        saveLists(parsed.lists);
+        if (parsed.settings) saveSettings(parsed.settings);
+        
+        // Sync UI toggles with new settings
+        overlay.querySelector('#cb-collision-toggle').checked = getSettings().checkCollisions;
+        overlay.querySelector('#cb-sync-interval').value = getSettings().syncInterval;
+        
+        renderOwn(); 
+        renderLists();
+        
+        alert('Data imported successfully!');
+        overlay.querySelector('#cb-json').value = '';
+      } catch (e) { 
+        alert('Import failed: ' + e.message); 
+      }
     });
 
     // ---- External lists ----
@@ -677,19 +717,22 @@
     injectFloatingButton();
   }
 
-  // ---------- Background auto-sync (once/day) ----------
-  const DAY = 24 * 60 * 60 * 1000;
-
-  for (const list of getLists()) {
-    if (list.enabled && (!list.lastSync || Date.now() - new Date(list.lastSync).getTime() > DAY)) {
-      syncList(list.id, { silent: true }).catch(() => {});
+  // ---------- Background auto-sync ----------
+  const syncHours = getSettings().syncInterval;
+  if (syncHours > 0) {
+    const syncIntervalMs = syncHours * 60 * 60 * 1000;
+    
+    for (const list of getLists()) {
+      if (list.enabled && (!list.lastSync || Date.now() - new Date(list.lastSync).getTime() > syncIntervalMs)) {
+        syncList(list.id, { silent: true }).catch(() => {});
+      }
     }
-  }
 
-  if (getSettings().checkCollisions) {
-    const cache = getDdgCache();
-    if (!cache.lastFetched || Date.now() - new Date(cache.lastFetched).getTime() > DAY) {
-      fetchDdgOfficial({ silent: true }).catch(() => {});
+    if (getSettings().checkCollisions) {
+      const cache = getDdgCache();
+      if (!cache.lastFetched || Date.now() - new Date(cache.lastFetched).getTime() > syncIntervalMs) {
+        fetchDdgOfficial({ silent: true }).catch(() => {});
+      }
     }
   }
 
