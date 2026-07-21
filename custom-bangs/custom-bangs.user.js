@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Custom DuckDuckGo Bangs
 // @namespace    https://github.com/JMcrafter26/userscripts
-// @version      1.1.0
+// @version      1.2.0
 // @description  Add your own !bangs to DuckDuckGo without touching DDG's built-in ones
 // @author       Cufiy
-// @downloadURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
-// @updateURL      https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
+// @downloadURL  https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
+// @updateURL    https://raw.githubusercontent.com/JMcrafter26/userscripts/main/custom-bangs/custom-bangs.user.js
 // @match        https://duckduckgo.com/*
 // @match        https://*.duckduckgo.com/*
 // @grant        GM_getValue
@@ -242,6 +242,7 @@
 
   function openManager() {
     injectStyle();
+    let editBangId = null;
 
     const overlay = document.createElement('div');
     overlay.className = 'cb-overlay';
@@ -264,6 +265,7 @@
             <input id="cb-in-example" placeholder="Example search, e.g. userscripts" />
             <button class="cb-btn" id="cb-test">Test</button>
             <button class="cb-btn primary" id="cb-add">Add</button>
+            <button class="cb-btn" id="cb-cancel-edit" style="display:none;">Cancel</button>
           </div>
         </div>
 
@@ -346,6 +348,7 @@
           <span class="cb-url">${escapeHtml(b.url)}</span>
           ${warn}
           <button class="cb-btn" data-action="test">Test</button>
+          <button class="cb-btn" data-action="edit">Edit</button>
           <button class="cb-btn danger" data-action="delete">Delete</button>
         </div>`;
       }).join('');
@@ -358,13 +361,33 @@
       const id = item.dataset.id;
       const own = getOwn();
       const bang = own.find(b => b.id === id);
+
       if (btn.dataset.action === 'delete') {
+        if (editBangId === id) overlay.querySelector('#cb-cancel-edit').click(); // Abort edit if open
         saveOwn(own.filter(b => b.id !== id));
         renderOwn(); renderLists();
       } else if (btn.dataset.action === 'test') {
         const q = bang.example || 'test';
         window.open(buildTarget(bang.url, q), '_blank');
+      } else if (btn.dataset.action === 'edit') {
+        editBangId = bang.id;
+        overlay.querySelector('#cb-in-trigger').value = bang.trigger;
+        overlay.querySelector('#cb-in-name').value = bang.name || '';
+        overlay.querySelector('#cb-in-url').value = bang.url || '';
+        overlay.querySelector('#cb-in-example').value = bang.example || '';
+        overlay.querySelector('#cb-add').textContent = 'Save Edit';
+        overlay.querySelector('#cb-cancel-edit').style.display = 'inline-block';
       }
+    });
+
+    overlay.querySelector('#cb-cancel-edit').addEventListener('click', () => {
+      editBangId = null;
+      overlay.querySelector('#cb-in-trigger').value = '';
+      overlay.querySelector('#cb-in-name').value = '';
+      overlay.querySelector('#cb-in-url').value = '';
+      overlay.querySelector('#cb-in-example').value = '';
+      overlay.querySelector('#cb-add').textContent = 'Add';
+      overlay.querySelector('#cb-cancel-edit').style.display = 'none';
     });
 
     overlay.querySelector('#cb-add').addEventListener('click', () => {
@@ -372,13 +395,32 @@
       const name = overlay.querySelector('#cb-in-name').value.trim();
       const url = overlay.querySelector('#cb-in-url').value.trim();
       const example = overlay.querySelector('#cb-in-example').value.trim();
+      
       if (!trigger || !url) { alert('Bang command and Bang URL are required.'); return; }
       if (!url.includes('{{{s}}}') && !confirm('URL has no {{{s}}} placeholder — the query will just be appended. Continue?')) return;
 
       const list = getOwn();
-      const existingIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase());
-      const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, url, example };
-      if (existingIdx >= 0) list[existingIdx] = entry; else list.push(entry);
+      
+      if (editBangId) {
+        const idx = list.findIndex(b => b.id === editBangId);
+        if (idx >= 0) {
+          // Check collision if user modified the trigger during the edit
+          const conflictIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase() && b.id !== editBangId);
+          if (conflictIdx >= 0) {
+            alert('Another custom bang with this trigger already exists!');
+            return;
+          }
+          list[idx] = { id: editBangId, name, trigger, url, example };
+        }
+        editBangId = null;
+        overlay.querySelector('#cb-add').textContent = 'Add';
+        overlay.querySelector('#cb-cancel-edit').style.display = 'none';
+      } else {
+        const existingIdx = list.findIndex(b => b.trigger.toLowerCase() === trigger.toLowerCase());
+        const entry = { id: existingIdx >= 0 ? list[existingIdx].id : uid(), name, trigger, url, example };
+        if (existingIdx >= 0) list[existingIdx] = entry; else list.push(entry);
+      }
+
       saveOwn(list);
       overlay.querySelector('#cb-in-trigger').value = '';
       overlay.querySelector('#cb-in-name').value = '';
