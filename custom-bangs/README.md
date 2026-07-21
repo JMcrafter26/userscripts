@@ -64,7 +64,7 @@ Once installed, the script runs automatically on DuckDuckGo and all other suppor
 2. Click **⚙️ Manage Custom Bangs**.
 3. Use the interface to add a new bang, tweak your sync settings, or manage search engine integrations.
 
-Alternatively, you can also access the management interface by typing `!config` (or `!custombangs`, `!bangs`) in your browser's address bar and clicking on the floating **⚙️ Custom Bangs** button.
+Alternatively, you can also access the management interface by visiting `https://duckduckgo.com/bangs` in your browser and clicking on the floating **⚙️ Custom Bangs** button.
 
 * *Example Trigger:* `!gh`
 * *Example URL:* `https://github.com/search?q={{{s}}}` (The `{{{s}}}` acts as the placeholder for your search query).
