@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Gemini Enhancements (locally saved chats, no API/training)
-// @author       @cufiy
+// @author       Cufiy
 // @namespace    local.gemini.persist
 // @version      0.3.0
 // @description  Saves Gemini chats locally on-device (GM_setValue), shows them right inside the real sidebar, can reopen a saved chat inline (same look as a real chat) and seamlessly continues it by re-injecting the hidden history when you reply. No export, no server, no API costs.
@@ -256,16 +256,21 @@
   // Cloning outerHTML preserves classes and Angular's scoped "_ngcontent-*"
   // attributes, which is usually enough for the clone to pick up the same
   // CSS. But some visual details (e.g. the user-message bubble background)
-  // can depend on Angular internals we can't replicate from static markup.
-  // As a safety net we also snapshot a handful of *computed* style values
-  // from the real element and re-apply them as inline styles on the clone,
-  // so the important bits (background, radius, padding, alignment) are
-  // guaranteed to look right even if the class-based styling doesn't
-  // carry over perfectly.
+  // can depend on Angular internals we can't replicate from static markup -
+  // notably, Angular can assign a DIFFERENT "_ngcontent-*" id to the same
+  // component on a different page load, which silently breaks scoped CSS
+  // matching for a template that was persisted from an earlier session.
+  // As a safety net we also snapshot a few purely COSMETIC computed style
+  // values (background, radius, border, font) from the real element and
+  // re-apply them as inline styles on the clone. We deliberately do NOT
+  // snapshot layout properties like display/max-width/justify-content -
+  // those depend on the surrounding flex context and forcing a value
+  // captured from a different layout moment distorts the shape/position
+  // instead of fixing it (learned the hard way - don't add those back
+  // without also reproducing the exact flex context they were measured in).
   const STYLE_PROPS_TO_SNAPSHOT = [
-    'backgroundColor', 'color', 'borderRadius', 'padding', 'margin',
-    'fontSize', 'lineHeight', 'fontFamily', 'maxWidth', 'display',
-    'justifyContent', 'alignItems', 'textAlign', 'boxShadow', 'border', 'whiteSpace',
+    'backgroundColor', 'color', 'borderRadius', 'border', 'boxShadow',
+    'fontSize', 'lineHeight', 'fontFamily', 'padding',
   ];
 
   function snapshotStyle(el) {
