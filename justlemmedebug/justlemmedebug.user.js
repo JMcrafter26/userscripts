@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         JustLemmeDebug
-// @version      2.0
+// @version      2.1
 // @description  Disable anti-devtools techniques, block unwanted scripts, bypass debugger spammers, and filter console spam (dates, divs, empty errors)
 //
 // @author       Cufiy + deeeeone
@@ -206,14 +206,34 @@
         console.clear = () => OriginalConsole.log('[Anti-Anti] console.clear() blocked');
     }
 
-    window.addEventListener('keydown', e => {
-        if ((e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) || e.key === 'F12') {
-            e.stopImmediatePropagation(); e.preventDefault();
+    // Protect keyboard shortcuts by stopping event propagation BEFORE the website sees it.
+    // By purposely OMITTING e.preventDefault(), the browser native function (opening DevTools) still occurs!
+    function isDevToolsShortcut(e) {
+        const key = e.key ? e.key.toUpperCase() : '';
+        if (key === 'F12') return true;
+        if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(key)) return true; // Windows/Linux DevTools
+        if (e.metaKey && e.altKey && ['I', 'J', 'C', 'U'].includes(key)) return true; // Mac DevTools
+        if (e.ctrlKey && key === 'U') return true; // Windows/Linux View Source
+        return false;
+    }
+
+    const stopAntiDevToolsKeys = (e) => {
+        if (protectDevToolsShortcuts && isDevToolsShortcut(e)) {
+            e.stopImmediatePropagation();
+        }
+    };
+
+    window.addEventListener('keydown', stopAntiDevToolsKeys, true);
+    window.addEventListener('keyup', stopAntiDevToolsKeys, true);
+    window.addEventListener('keypress', stopAntiDevToolsKeys, true);
+    
+    // Protect right click / Inspect Element
+    window.addEventListener('contextmenu', e => {
+        if (protectDevToolsShortcuts) {
+            e.stopImmediatePropagation();
         }
     }, true);
-    window.addEventListener('contextmenu', e => {
-        e.stopImmediatePropagation();
-    }, true);
+
 
     ['outerWidth','outerHeight'].forEach(prop => {
         Object.defineProperty(window, prop, { get: () => 1000, configurable: true });
