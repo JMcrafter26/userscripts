@@ -57,6 +57,12 @@ Preserves console access in iframes, ensuring you can debug embedded content.
 
 Runs automatically on **all websites**, providing consistent debugging capabilities everywhere you browse.
 
+### Undetected by Devtool Detectors
+
+Not detected by common devtool detection scripts, allowing you to debug without being blocked, completely bypassing anti-debugging measures.
+
+Tested with [DevTools Detector](https://github.com/AEPKILL/devtools-detector) and other similar scripts.
+
 ---
 
 ## 💡 Usage

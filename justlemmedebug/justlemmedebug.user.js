@@ -22,6 +22,10 @@
 (function() {
     'use strict';
 
+    // if url contains debug = true, enable debug logging
+    let DEBUG = window.location.search.includes('debug=true');
+
+
     ///////////////////////////
     // SPAM FILTER - Store originals early
     ///////////////////////////
@@ -85,7 +89,7 @@
     function shouldFilterSpam(...args) {
         if (args.length === 0) return false;
         
-        if (args.every(arg => arg === '' || arg === null || arg === undefined)) {
+        if (args.every(arg => arg === '' || arg === null || arg === undefined || (typeof arg === 'object' && (!arg.message || arg.message === '')))) {
             return true;
         }
 
@@ -248,6 +252,7 @@
     };
 
     function shouldLog(type) {
+        if (!DEBUG) return false;
         const cutoff = cutoffs[type]; if (cutoff.tripped) return false;
         cutoff.current = cutoff.current||0;
         const now = Date.now(); cutoff.last = cutoff.last||now;
@@ -436,10 +441,6 @@
     };
 
     // Initial message
-    Originals.log('%c[LemmeDebug + Spam Filter] Active', 'color: green; font-weight: bold;');
-    Originals.log('%c  • Anti-devtools protection enabled', 'color: green;');
-    Originals.log('%c  • Debugger bypass active', 'color: green;');
-    Originals.log('%c  • Console spam filter running', 'color: green;');
-    Originals.log('%c  • Use getSpamStats() to see blocked messages', 'color: cyan;');
+    Originals.log('%c[JustLemmeDebug] Script loaded. Anti-debugging measures disabled, console spam filtered.', 'color: green; font-weight: bold;');
 
 })();
