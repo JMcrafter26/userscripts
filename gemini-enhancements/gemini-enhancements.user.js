@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Gemini Enhancements (locally saved chats, no API/training)
+// @name         Gemini Enhancements
 // @author       Cufiy
 // @namespace    local.gemini.persist
 // @version      0.3.0
