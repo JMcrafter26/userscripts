@@ -7,7 +7,7 @@
 
 [![GitHub](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/social/github-enhancements/cozy.svg)](https://github.com/JMcrafter26/userscripts)
 [![GitHub Issues](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/social/github-issues/cozy.svg)](https://github.com/JMcrafter26/userscripts/issues)
-
+[![Featured on FMHY](https://cdn.jsdelivr.net/gh/JMcrafter26/badges@main/src/assets/available/fmhy/cozy.svg)](https://fmhy.net/privacy#:~:text=Bangs%20/%20Bangs%20Extension%20/-,Bangs%20Script)
 ---
 
 ## 📦 Installation
